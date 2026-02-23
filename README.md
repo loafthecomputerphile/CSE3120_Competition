@@ -1,5 +1,5 @@
 ## CSE3120 Competition Repo
 
 #### members:
-- Drew Quashio
+- Drew Quashie
 - Richard Alonso
