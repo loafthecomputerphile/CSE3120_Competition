@@ -33,6 +33,25 @@ GetRandomFileLine PROC
         je  EndCount
         mov ecx, bytesRead
         mov esi, OFFSET file_buffer
+
+    Scan:
+        lodsb
+        cmp al, 0Ah          ; Line Feed found?
+        jne Next
+        inc current_line
+    Next:
+        loop Scan
+        jmp CountLoop
+    EndCount:
+        INVOKE CloseHandle, fileHandle
+        mov eax, current_line
+        cmp eax, 0
+        je  Fail
+        call RandomRange     ; Returns [0 to current_line-1] in EAX
+        ret
+    Fail:
+        xor eax, eax
+        ret
     
 GetRandomFileLine ENDP
 
