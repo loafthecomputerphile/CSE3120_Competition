@@ -12,26 +12,63 @@ INCLUDE Irvine32.inc
     current_line    DWORD ?                   ; line counter while reading
     is_copying      BYTE ?                     ; flag: 1 = copying target line
 
-    fileHandle       DWORD ?
-    bytesRead        DWORD ?
+    file_handle       DWORD ?
+    bytes_read        DWORD ?
+
+
+    prompt_char   BYTE "Guess a letter (5 attempts left): ", 0
+    prompt_final  BYTE "Final chance! Type the whole word: ", 0
+    msg_hit       BYTE "Found a match!", 13, 10, 0
+    msg_miss      BYTE "Not in the word.", 13, 10, 0
+    msg_win       BYTE "You got it! You win!", 13, 10, 0
+    msg_lose      BYTE "Incorrect. Game Over.", 13, 10, 0
+    
+    mask_buffer   BYTE 1024 DUP(0)  ; Holds underscores like "_ _ _ _"
+    user_input    BYTE 1024 DUP(0)  ; Holds the final word guess
+    guesses_left  DWORD 5
 
 .code
+
+
+main PROC
+    call Randomize              ; Seed the random generator
+
+    ; 1. Get a random line index
+    call GetRandomFileLine      ; Returns index in EAX
+    
+    ; 2. Load that specific line into line_buffer
+    call LoadFileLine           ; EAX is already the input
+
+    ; 3. Run the Game
+    call PlayGuessingGame
+
+    exit
+main ENDP
+
+OPENFILECREATE MACRO
+    INVOKE CreateFile, ADDR databaseName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
+ENDM
+
+OPENFILEREAD MACRO
+    INVOKE ReadFile, file_handle, ADDR file_buffer, 4096, ADDR bytes_read, 0
+ENDM
+
 
 ; returns: EAX = random line index (0-based)
 GetRandomFileLine PROC
     ; 1. Open the file to count total lines
-    INVOKE CreateFile, ADDR databaseName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
-    mov fileHandle, eax
+    OPENFILECREATE
+    mov file_handle, eax
     cmp eax, INVALID_HANDLE_VALUE
     je  Fail
 
     mov current_line, 0
 
     CountLoop:
-        INVOKE ReadFile, fileHandle, ADDR file_buffer, 4096, ADDR bytesRead, 0
-        cmp bytesRead, 0
+        OPENFILEREAD
+        cmp bytes_read, 0
         je  EndCount
-        mov ecx, bytesRead
+        mov ecx, bytes_read
         mov esi, OFFSET file_buffer
 
     Scan:
@@ -43,7 +80,7 @@ GetRandomFileLine PROC
         loop Scan
         jmp CountLoop
     EndCount:
-        INVOKE CloseHandle, fileHandle
+        INVOKE CloseHandle, file_handle
         mov eax, current_line
         cmp eax, 0
         je  Fail
@@ -55,15 +92,148 @@ GetRandomFileLine PROC
     
 GetRandomFileLine ENDP
 
-main PROC
 
-	mov	eax,val1			; start with 10000h
-	add	eax,val2			; add 40000h
-	sub	eax,val3			; subtract 20000h
-	mov	finalVal,eax		; store the result (30000h)
-	call	DumpRegs			; display the registers
+; input: EAX = line index to retrieve
+LoadFileLine PROC
+    mov target_line, eax
+    mov current_line, 0
+    mov is_copying, 0
+    
+    OPENFILECREATE
+    mov file_handle, eax
+    cmp eax, INVALID_HANDLE_VALUE
+    je  LoadExit
 
-	exit
-main ENDP
+    mov edi, OFFSET line_buffer
+
+    ReadLoop:
+        OPENFILEREAD
+        cmp bytes_read, 0
+        je  CloseAndExit
+        
+        mov ecx, bytes_read
+        mov esi, OFFSET file_buffer
+
+    Process:
+        lodsb
+        mov bl, al
+        
+        mov edx, current_line
+        cmp edx, target_line
+        jne Skip
+
+        ; We are at the target line
+        mov is_copying, 1
+        cmp bl, 0Dh          ; Carriage Return?
+        je  Finish
+        cmp bl, 0Ah          ; Line Feed?
+        je  Finish
+        
+        mov [edi], bl        ; Copy char to line_buffer
+        inc edi
+        jmp NextChar
+
+    Skip:
+        cmp bl, 0Ah
+        jne NextChar
+        inc current_line
+
+    NextChar:
+        loop Process
+        jmp  ReadLoop
+
+    Finish:
+        mov BYTE PTR [edi], 0 ; Null terminate
+    CloseAndExit:
+        INVOKE CloseHandle, file_handle
+    LoadExit:
+        ret
+LoadFileLine ENDP
+
+PlayGuessingGame PROC
+; Logic: 5 single letter guesses, then one final word entry
+;---------------------------------------------------------
+    ; Create the mask (underscores)
+    mov esi, OFFSET line_buffer
+    mov edi, OFFSET mask_buffer
+    MaskLoop:
+        lodsb
+        cmp al, 0
+        je  DoneMask
+        mov BYTE PTR [edi], '_'
+        inc edi
+        jmp MaskLoop
+    DoneMask:
+        mov BYTE PTR [edi], 0
+
+    GameLoop:
+        cmp guesses_left, 0
+        je  FinalInput
+
+        ; Display Progress
+        mov edx, OFFSET mask_buffer
+        call WriteString
+        call CrLf
+
+        ; Prompt User
+        mov edx, OFFSET prompt_char
+        call WriteString
+        mov eax, guesses_left
+        call WriteDec
+
+        call ReadChar
+        call WriteChar
+        mov bl, 0           ; Hit flag
+        
+        ; Scan for hits
+        mov esi, OFFSET line_buffer
+        mov edi, OFFSET mask_buffer
+    ScanHits:
+        mov bh, [esi]
+        cmp bh, 0
+        je  ScanDone
+        cmp bh, al
+        jne NoMatch
+        mov [edi], al
+        mov bl, 1
+    NoMatch:
+        inc esi
+        inc edi
+        jmp ScanHits
+    ScanDone:
+        dec guesses_left
+        cmp bl, 1
+        je  Hit
+        mov edx, OFFSET msg_miss
+        call WriteString
+        jmp GameLoop
+    Hit:
+        mov edx, OFFSET msg_hit
+        call WriteString
+        jmp GameLoop
+
+    FinalInput:
+        call CrLf
+        mov edx, OFFSET prompt_final
+        call WriteString
+        mov edx, OFFSET user_input
+        mov ecx, SIZEOF user_input
+        call ReadString
+
+        ; Compare user_input to line_buffer
+        mov esi, OFFSET user_input
+        mov edi, OFFSET line_buffer
+        INVOKE Str_compare, ADDR user_input, ADDR line_buffer
+        jz  Win
+        mov edx, OFFSET msg_lose
+        call WriteString
+        jmp GameExit
+    Win:
+        mov edx, OFFSET msg_win
+        call WriteString
+    GameExit:
+        ret
+PlayGuessingGame ENDP
+
 
 END main
