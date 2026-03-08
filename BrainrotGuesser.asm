@@ -22,6 +22,7 @@ INCLUDE Irvine32.inc
     msg_miss      BYTE " Not in the word.", 13, 10, 0
     msg_win       BYTE "You got it! You win!", 13, 10, 0
     msg_lose      BYTE "Incorrect. Game Over.", 13, 10, 0
+    correct_word  BYTE "The correct brainrot was: ", 0
     space         BYTE  " ", 0
     
     mask_buffer   BYTE 1024 DUP(0)  ; Holds underscores like "_ _ _ _"
@@ -34,13 +35,10 @@ INCLUDE Irvine32.inc
 main PROC
     call Randomize              ; Seed the random generator
 
-    ; 1. Get a random line index
     call GetRandomFileLine      ; Returns index in EAX
     
-    ; 2. Load that specific line into line_buffer
     call LoadFileLine           ; EAX is already the input
 
-    ; 3. Run the Game
     call PlayGuessingGame
 
     exit
@@ -71,12 +69,58 @@ CMP_NOCASE MACRO char1, char2
         jb  skip2
         cmp char2, 'z'
         ja  skip2
-        and char2, 11011111b+
+        and char2, 11011111b
     skip2:
         cmp char1, char2
         pop ebx
         pop eax
 ENDM
+
+
+; input: esi = pointer to string 1, edi = pointer to string 2
+; output: zf = 1 if match
+Str_Compare_NOCASE PROC
+    pushad              ; Save all registers
+
+    L1:
+        mov al, [esi]      
+        mov bl, [edi]       
+        
+        ; Convert AL to uppercase
+        cmp al, 'a'
+        jb  CheckBL
+        cmp al, 'z'
+        ja  CheckBL
+        and al, 11011111b
+    CheckBL:
+        ; Convert BL to uppercase
+        cmp bl, 'a'
+        jb  CompareChars
+        cmp bl, 'z'
+        ja  CompareChars
+        and bl, 11011111b
+
+    CompareChars:
+        cmp al, bl      ; Compare normalized chars
+        jne NotEqual        ; If mismatch, exit
+        
+        cmp al, 0
+        je  StringsMatch
+        
+        inc esi
+        inc edi
+        jmp L1
+
+    StringsMatch:
+        popad               ; Restore registers
+        test eax, 0         ; Force Zero Flag = 1
+        ret
+
+    NotEqual:
+        popad               ; Restore registers
+        or eax, 1           ; Force Zero Flag = 0
+        ret
+Str_Compare_NOCASE ENDP
 
 
 ; returns: EAX = random line index (0-based)
@@ -252,10 +296,16 @@ PlayGuessingGame PROC
         ; Compare user_input to line_buffer
         mov esi, OFFSET user_input
         mov edi, OFFSET line_buffer
-        INVOKE Str_compare, ADDR user_input, ADDR line_buffer
+
+        call Str_Compare_NOCASE
         jz  Win
+        mov edx, OFFSET correct_word
+        call WriteString
+        mov edx, OFFSET line_buffer
+        call WriteString
         mov edx, OFFSET msg_lose
         call WriteString
+        call Crlf
         jmp GameExit
     Win:
         mov edx, OFFSET msg_win
