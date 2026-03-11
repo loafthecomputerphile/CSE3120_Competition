@@ -75,7 +75,11 @@ CMP_NOCASE MACRO char1, char2
         pop ebx
         pop eax
 ENDM
-
+;NEW MACRO
+WRITEMSG MACRO varName
+    mov edx, OFFSET varName     ; moved the offset of varName into edx
+    call WriteString            ; print the string
+ENDM
 
 ; input: esi = pointer to string 1, edi = pointer to string 2
 ; output: zf = 1 if match
@@ -240,13 +244,12 @@ PlayGuessingGame PROC
         je  FinalInput
 
         ; Display Progress
-        mov edx, OFFSET mask_buffer
-        call WriteString
-        call CrLf
+WRITEMSG mask_buffer
+call CrLf
 
-        ; Prompt User
-        mov edx, OFFSET prompt_char
-        call WriteString
+; Prompt User
+WRITEMSG prompt_char
+
         mov eax, guesses_left
         call WriteDec
         
@@ -275,20 +278,22 @@ PlayGuessingGame PROC
         dec guesses_left
         cmp bl, 1
         je  Hit
-        mov edx, OFFSET msg_miss
-        call WriteString
+
+        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
+        WRITEMSG msg_miss
         jmp GameLoop
     Hit:
-        mov edx, OFFSET msg_hit
-        call WriteString
+        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
+        WRITEMSG msg_hit
         jmp GameLoop
 
     FinalInput:
-        mov edx, OFFSET mask_buffer
-        call WriteString
+        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
+        WRITEMSG mask_buffer
         call CrLf
-        mov edx, OFFSET prompt_final
-        call WriteString
+
+        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
+        WRITEMSG prompt_final
         mov edx, OFFSET user_input
         mov ecx, SIZEOF user_input
         call ReadString
@@ -299,17 +304,20 @@ PlayGuessingGame PROC
 
         call Str_Compare_NOCASE
         jz  Win
-        mov edx, OFFSET correct_word
-        call WriteString
-        mov edx, OFFSET line_buffer
-        call WriteString
-        mov edx, OFFSET msg_lose
-        call WriteString
+
+        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
+        WRITEMSG correct_word
+
+        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
+        WRITEMSG line_buffer
+
+        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
+        WRITEMSG msg_lose
         call Crlf
         jmp GameExit
     Win:
-        mov edx, OFFSET msg_win
-        call WriteString
+        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
+        WRITEMSG msg_win
     GameExit:
         ret
 PlayGuessingGame ENDP
