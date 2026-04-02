@@ -16,7 +16,7 @@ INCLUDE Irvine32.inc
     bytes_read        DWORD ?
 
 
-    prompt_char   BYTE "Guess a letter (5 attempts left): ", 0
+    prompt_char   BYTE "Guess a letter. Attempts Left: ", 0
     prompt_final  BYTE "Final chance! Type the whole word: ", 0
     msg_hit       BYTE " Found a match!", 13, 10, 0
     msg_miss      BYTE " Not in the word.", 13, 10, 0
@@ -285,6 +285,7 @@ WRITEMSG prompt_char
     Hit:
         ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
         WRITEMSG msg_hit
+        call Crlf
         jmp GameLoop
 
     FinalInput:
@@ -307,10 +308,11 @@ WRITEMSG prompt_char
 
         ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
         WRITEMSG correct_word
-
+        
         ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
         WRITEMSG line_buffer
-
+        
+        call Crlf
         ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
         WRITEMSG msg_lose
         call Crlf
