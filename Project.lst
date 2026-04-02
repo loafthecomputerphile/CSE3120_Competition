@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.50.35723.0	    03/08/26 18:18:17
+Microsoft (R) Macro Assembler Version 14.50.35723.0	    04/02/26 05:24:43
 BrainrotGuesser.asm					     Page 1 - 1
 
 
@@ -144,7 +144,11 @@ BrainrotGuesser.asm					     Page 1 - 1
 				        pop ebx
 				        pop eax
 				ENDM
-
+				;NEW MACRO
+				WRITEMSG MACRO varName
+				    mov edx, OFFSET varName     ; moved the offset of varName into edx
+				    call WriteString            ; print the string
+				ENDM
 
 				; input: esi = pointer to string 1, edi = pointer to string 2
 				; output: zf = 1 if match
@@ -348,13 +352,16 @@ BrainrotGuesser.asm					     Page 1 - 1
  000001AB  0F 84 00000095	        je  FinalInput
 
 				        ; Display Progress
- 000001B1  BA 000015E0 R	        mov edx, OFFSET mask_buffer
- 000001B6  E8 00000000 E	        call WriteString
- 000001BB  E8 00000000 E	        call CrLf
+				WRITEMSG mask_buffer
+ 000001B1  BA 000015E0 R     1	    mov edx, OFFSET mask_buffer     ; moved the offset of varName into edx
+ 000001B6  E8 00000000 E     1	    call WriteString            ; print the string
+ 000001BB  E8 00000000 E	call CrLf
 
-				        ; Prompt User
- 000001C0  BA 00001527 R	        mov edx, OFFSET prompt_char
- 000001C5  E8 00000000 E	        call WriteString
+				; Prompt User
+				WRITEMSG prompt_char
+ 000001C0  BA 00001527 R     1	    mov edx, OFFSET prompt_char     ; moved the offset of varName into edx
+ 000001C5  E8 00000000 E     1	    call WriteString            ; print the string
+
  000001CA  A1 00001DE0 R	        mov eax, guesses_left
  000001CF  E8 00000000 E	        call WriteDec
 				        
@@ -400,20 +407,30 @@ BrainrotGuesser.asm					     Page 1 - 1
  0000021D  FF 0D 00001DE0 R	        dec guesses_left
  00000223  80 FB 01		        cmp bl, 1
  00000226  74 0F		        je  Hit
- 00000228  BA 00001580 R	        mov edx, OFFSET msg_miss
- 0000022D  E8 00000000 E	        call WriteString
+
+				        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
+				        WRITEMSG msg_miss
+ 00000228  BA 00001580 R     1	    mov edx, OFFSET msg_miss     ; moved the offset of varName into edx
+ 0000022D  E8 00000000 E     1	    call WriteString            ; print the string
  00000232  E9 FFFFFF6D		        jmp GameLoop
  00000237			    Hit:
- 00000237  BA 0000156E R	        mov edx, OFFSET msg_hit
- 0000023C  E8 00000000 E	        call WriteString
+				        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
+				        WRITEMSG msg_hit
+ 00000237  BA 0000156E R     1	    mov edx, OFFSET msg_hit     ; moved the offset of varName into edx
+ 0000023C  E8 00000000 E     1	    call WriteString            ; print the string
  00000241  E9 FFFFFF5E		        jmp GameLoop
 
  00000246			    FinalInput:
- 00000246  BA 000015E0 R	        mov edx, OFFSET mask_buffer
- 0000024B  E8 00000000 E	        call WriteString
+				        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
+				        WRITEMSG mask_buffer
+ 00000246  BA 000015E0 R     1	    mov edx, OFFSET mask_buffer     ; moved the offset of varName into edx
+ 0000024B  E8 00000000 E     1	    call WriteString            ; print the string
  00000250  E8 00000000 E	        call CrLf
- 00000255  BA 0000154A R	        mov edx, OFFSET prompt_final
- 0000025A  E8 00000000 E	        call WriteString
+
+				        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
+				        WRITEMSG prompt_final
+ 00000255  BA 0000154A R     1	    mov edx, OFFSET prompt_final     ; moved the offset of varName into edx
+ 0000025A  E8 00000000 E     1	    call WriteString            ; print the string
  0000025F  BA 000019E0 R	        mov edx, OFFSET user_input
  00000264  B9 00000400		        mov ecx, SIZEOF user_input
  00000269  E8 00000000 E	        call ReadString
@@ -424,24 +441,35 @@ BrainrotGuesser.asm					     Page 1 - 1
 
  00000278  E8 FFFFFD9E		        call Str_Compare_NOCASE
  0000027D  74 25		        jz  Win
- 0000027F  BA 000015C3 R	        mov edx, OFFSET correct_word
- 00000284  E8 00000000 E	        call WriteString
- 00000289  BA 00000116 R	        mov edx, OFFSET line_buffer
- 0000028E  E8 00000000 E	        call WriteString
- 00000293  BA 000015AB R	        mov edx, OFFSET msg_lose
- 00000298  E8 00000000 E	        call WriteString
+
+				        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
+				        WRITEMSG correct_word
+ 0000027F  BA 000015C3 R     1	    mov edx, OFFSET correct_word     ; moved the offset of varName into edx
+ 00000284  E8 00000000 E     1	    call WriteString            ; print the string
+
+				        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
+				        WRITEMSG line_buffer
+ 00000289  BA 00000116 R     1	    mov edx, OFFSET line_buffer     ; moved the offset of varName into edx
+ 0000028E  E8 00000000 E     1	    call WriteString            ; print the string
+
+				        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
+				        WRITEMSG msg_lose
+ 00000293  BA 000015AB R     1	    mov edx, OFFSET msg_lose     ; moved the offset of varName into edx
+ 00000298  E8 00000000 E     1	    call WriteString            ; print the string
  0000029D  E8 00000000 E	        call Crlf
  000002A2  EB 0A		        jmp GameExit
  000002A4			    Win:
- 000002A4  BA 00001594 R	        mov edx, OFFSET msg_win
- 000002A9  E8 00000000 E	        call WriteString
+				        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
+				        WRITEMSG msg_win
+ 000002A4  BA 00001594 R     1	    mov edx, OFFSET msg_win     ; moved the offset of varName into edx
+ 000002A9  E8 00000000 E     1	    call WriteString            ; print the string
  000002AE			    GameExit:
  000002AE  C3			        ret
  000002AF			PlayGuessingGame ENDP
 
 
 				END main
-Microsoft (R) Macro Assembler Version 14.50.35723.0	    03/08/26 18:18:17
+Microsoft (R) Macro Assembler Version 14.50.35723.0	    04/02/26 05:24:43
 BrainrotGuesser.asm					     Symbols 2 - 1
 
 
@@ -454,6 +482,7 @@ Macros:
 CMP_NOCASE . . . . . . . . . . .	Proc
 OPENFILECREATE . . . . . . . . .	Proc
 OPENFILEREAD . . . . . . . . . .	Proc
+WRITEMSG . . . . . . . . . . . .	Proc
 
 
 Structures and Unions:
