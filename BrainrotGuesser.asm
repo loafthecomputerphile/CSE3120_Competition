@@ -279,6 +279,27 @@ DrawLivesLine PROC
         ret
 DrawLivesLine ENDP
 
+ClearStatusLine PROC
+    pushad
+    SET_COLOR CLR_NORMAL
+    GOTO_XY INNER_LEFT, STATUS_ROW
+    mov edx, OFFSET blankLine30
+    call WriteString
+    popad
+    ret
+ClearStatusLine ENDP
+
+DrawStatusHit PROC
+    pushad
+    call ClearStatusLine
+    SET_COLOR CLR_HIT
+    GOTO_XY INNER_LEFT, STATUS_ROW
+    mov edx, OFFSET hitMsg2
+    call WriteString
+    popad
+    ret
+DrawStatusHit ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
