@@ -57,7 +57,31 @@ CLR_LOSE    EQU 0Ch    ; light red
     user_input    BYTE 1024 DUP(0)  ; Holds the final word guess
     guesses_left  DWORD 5
 
+
+    titleStr    BYTE "   >> BRAINROT GUESSER <<   ", 0
+    wordLbl     BYTE "WORD:  ", 0
+    livesLbl    BYTE "LIVES: ", 0
+    inputLbl    BYTE "Guess a letter: ", 0
+    finalLbl    BYTE "Final guess - type the word: ", 0
+    hitMsg2     BYTE " >> Found it! No cap.        ", 0
+    missMsg2    BYTE " >> Not in the word. L ratio  ", 0
+    winMsg2     BYTE "  YOU WIN! Sigma rizz achieved! ", 0
+    loseMsg2    BYTE "  GAME OVER. You got cooked.    ", 0
+    answerLbl   BYTE "  The brainrot was: ", 0
+    blankLine30 BYTE "                              ", 0   ; 30 spaces
+
 .code
+
+SET_COLOR MACRO colorVal
+    mov eax, colorVal
+    call SetTextColor
+ENDM
+
+GOTO_XY MACRO col, row
+    mov dl, col
+    mov dh, row
+    call Gotoxy
+ENDM
 
 
 main PROC
