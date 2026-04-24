@@ -1,6 +1,34 @@
 
 INCLUDE Irvine32.inc
 
+BOX_LEFT    EQU 5
+BOX_TOP     EQU 2
+BOX_WIDTH   EQU 50
+BOX_HEIGHT  EQU 14
+
+INNER_LEFT  EQU BOX_LEFT  + 2       ; 7
+TITLE_ROW   EQU BOX_TOP   + 1       ; 3
+DIV1_ROW    EQU BOX_TOP   + 2       ; 4  (below title)
+WORD_ROW    EQU BOX_TOP   + 3       ; 5
+DIV2_ROW    EQU BOX_TOP   + 4       ; 6  (below word)
+LIVES_ROW   EQU BOX_TOP   + 5       ; 7
+DIV3_ROW    EQU BOX_TOP   + 6       ; 8  (below lives)
+INPUT_ROW   EQU BOX_TOP   + 7       ; 9
+STATUS_ROW  EQU BOX_TOP   + 8       ; 10
+BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 15
+
+CLR_NORMAL  EQU 07h    ; gray
+CLR_BORDER  EQU 0Bh    ; light cyan
+CLR_TITLE   EQU 0Eh    ; yellow
+CLR_PROMPT  EQU 0Eh    ; yellow
+CLR_WORD    EQU 0Fh    ; bright white
+CLR_LIVES   EQU 0Ch    ; light red  (hearts)
+CLR_DIMMED  EQU 08h    ; dark gray  (used lives)
+CLR_HIT     EQU 0Ah    ; light green
+CLR_MISS    EQU 0Ch    ; light red
+CLR_WIN     EQU 0Ah    ; light green
+CLR_LOSE    EQU 0Ch    ; light red
+
 .data
     databaseName    BYTE "brainrot_database.txt", 0
     filename_copy   BYTE 256 DUP(0)          ; stored filename for LoadFileLine
