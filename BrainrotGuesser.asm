@@ -91,7 +91,7 @@ main PROC
     
     call LoadFileLine           ; EAX is already the input
 
-    ;call PlayGuessingGame
+    call PlayGuessingGame
 
     exit
 main ENDP
@@ -242,13 +242,12 @@ DrawLivesLine PROC
     mov edx, OFFSET livesLbl
     call WriteString
 
-    ; ♥  for each life remaining  (CP437 03h = ♥)
     SET_COLOR CLR_LIVES
     mov ecx, guesses_left
     cmp ecx, 0
     je  DLL_DoEmpty
     DLL_HeartLoop:
-        mov al, 03h
+        mov al, 'H'
         call WriteChar
         mov al, ' '
         call WriteChar
@@ -618,6 +617,126 @@ LoadFileLine ENDP
 ;    GameExit:
 ;        ret
 ;PlayGuessingGame ENDP
+
+PlayGuessingGame PROC
+    ;-- build mask (_ for every char) --------------------------
+    mov esi, OFFSET line_buffer
+    mov edi, OFFSET mask_buffer
+    PGG_MaskLoop:
+        lodsb
+        cmp al, 0
+        je  PGG_DoneMask
+        mov BYTE PTR [edi], '_'
+        inc edi
+        jmp PGG_MaskLoop
+    PGG_DoneMask:
+        mov BYTE PTR [edi], 0
+
+        ;-- draw static frame once ---------------------------------
+        call DrawBorder
+        call DrawTitle
+        mov dh, DIV1_ROW  
+        call DrawHDivider   ; ← won't assemble on one line;
+        ; write each divider call on its own line:
+        mov dh, DIV1_ROW
+        call DrawHDivider
+        mov dh, DIV2_ROW
+        call DrawHDivider
+        mov dh, DIV3_ROW
+        call DrawHDivider
+
+        call DrawWordLine
+        call DrawLivesLine
+
+        ;-- main letter-guess loop ---------------------------------
+    PGG_GameLoop:
+        cmp guesses_left, 0
+        je  PGG_FinalInput
+
+        call DrawWordLine
+        call DrawLivesLine
+
+        ; clear + redraw input prompt
+        SET_COLOR CLR_NORMAL
+        GOTO_XY INNER_LEFT, INPUT_ROW
+        mov edx, OFFSET blankLine30
+        call WriteString
+        SET_COLOR CLR_PROMPT
+        GOTO_XY INNER_LEFT, INPUT_ROW
+        mov edx, OFFSET inputLbl
+        call WriteString
+
+        ; place cursor right after the prompt text (16 chars wide)
+        SET_COLOR CLR_WORD
+        GOTO_XY INNER_LEFT + 16, INPUT_ROW
+
+        call ReadChar
+        call WriteChar              ; echo the letter
+
+        mov bl, 0                   ; hit flag
+
+        mov esi, OFFSET line_buffer
+        mov edi, OFFSET mask_buffer
+    PGG_ScanHits:
+        mov bh, [esi]
+        cmp bh, 0
+        je  PGG_ScanDone
+        CMP_NOCASE bh, al
+        jne PGG_NoMatch
+        mov [edi], al
+        mov bl, 1
+    PGG_NoMatch:
+        inc esi
+        inc edi
+        jmp PGG_ScanHits
+    PGG_ScanDone:
+        dec guesses_left
+        cmp bl, 1
+        je  PGG_Hit
+        call DrawStatusMiss
+        jmp PGG_GameLoop
+    PGG_Hit:
+        call DrawStatusHit
+        jmp PGG_GameLoop
+
+        ;-- final full-word guess -----------------------------------
+    PGG_FinalInput:
+        call DrawWordLine
+        call DrawLivesLine
+        call ClearStatusLine
+
+        SET_COLOR CLR_PROMPT
+        GOTO_XY INNER_LEFT, INPUT_ROW
+        mov edx, OFFSET blankLine30
+        call WriteString
+        GOTO_XY INNER_LEFT, INPUT_ROW
+        mov edx, OFFSET finalLbl
+        call WriteString
+
+        ; read the guess on STATUS_ROW so it sits inside the box
+        SET_COLOR CLR_WORD
+        GOTO_XY INNER_LEFT, STATUS_ROW
+        mov edx, OFFSET blankLine30
+        call WriteString
+        GOTO_XY INNER_LEFT, STATUS_ROW
+        mov edx, OFFSET user_input
+        mov ecx, SIZEOF user_input
+        call ReadString
+
+        mov esi, OFFSET user_input
+        mov edi, OFFSET line_buffer
+        call Str_Compare_NOCASE
+        jz  PGG_Win
+
+        call DrawLoseScreen
+        jmp PGG_GameExit
+    PGG_Win:
+        call DrawWinScreen
+    PGG_GameExit:
+        SET_COLOR CLR_NORMAL
+        GOTO_XY 0, BOT_ROW + 2     ; move cursor below box before exit
+        ret
+PlayGuessingGame ENDP
 
 
 END main
