@@ -216,6 +216,25 @@ DrawTitle PROC
     ret
 DrawTitle ENDP
 
+DrawWordLine PROC
+    pushad
+    SET_COLOR CLR_PROMPT
+    GOTO_XY INNER_LEFT, WORD_ROW
+    mov edx, OFFSET wordLbl
+    call WriteString
+    SET_COLOR CLR_WORD
+    mov edx, OFFSET mask_buffer
+    call WriteString
+    ; pad so stale chars from a longer previous mask are erased
+    mov ecx, 20
+    mov al, ' '
+    DWL_Pad:
+        call WriteChar
+        loop DWL_Pad
+        popad
+        ret
+DrawWordLine ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
