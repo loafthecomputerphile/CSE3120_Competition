@@ -326,6 +326,25 @@ DrawWinScreen PROC
     ret
 DrawWinScreen ENDP
 
+DrawLoseScreen PROC
+    pushad
+    SET_COLOR CLR_LOSE
+    GOTO_XY INNER_LEFT, INPUT_ROW
+    mov edx, OFFSET blankLine30
+    call WriteString
+    GOTO_XY INNER_LEFT, INPUT_ROW
+    mov edx, OFFSET loseMsg2
+    call WriteString
+    SET_COLOR CLR_WORD
+    GOTO_XY INNER_LEFT, STATUS_ROW
+    mov edx, OFFSET answerLbl
+    call WriteString
+    mov edx, OFFSET line_buffer
+    call WriteString
+    popad
+    ret
+DrawLoseScreen ENDP
+
 
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
