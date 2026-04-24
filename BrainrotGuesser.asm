@@ -176,6 +176,36 @@ DrawBorder PROC
         ret
 DrawBorder ENDP
 
+DrawHDivider PROC
+    pushad
+    SET_COLOR CLR_BORDER
+
+    ; ╠ left junction
+    mov dl, BOX_LEFT
+    call Gotoxy
+    mov al, 0CCh
+    call WriteChar
+
+    ; ═ fill
+    mov dl, BOX_LEFT + 1
+    mov ecx, BOX_WIDTH - 2
+    DHD_Loop:
+        call Gotoxy
+        mov al, 0CDh
+        call WriteChar
+        inc dl
+        loop DHD_Loop
+
+        ; ╣ right junction
+        mov dl, BOX_LEFT + BOX_WIDTH - 1
+        call Gotoxy
+        mov al, 0B9h
+        call WriteChar
+
+        popad
+        ret
+DrawHDivider ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
