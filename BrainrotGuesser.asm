@@ -91,7 +91,7 @@ main PROC
     
     call LoadFileLine           ; EAX is already the input
 
-    call PlayGuessingGame
+    ;call PlayGuessingGame
 
     exit
 main ENDP
@@ -517,106 +517,107 @@ LoadFileLine PROC
         ret
 LoadFileLine ENDP
 
-PlayGuessingGame PROC
-; Logic: 5 single letter guesses, then one final word entry
-;---------------------------------------------------------
-    ; Create the mask (underscores)
-    mov esi, OFFSET line_buffer
-    mov edi, OFFSET mask_buffer
-    MaskLoop:
-        lodsb
-        cmp al, 0
-        je  DoneMask
-        mov BYTE PTR [edi], '_'
-        inc edi
-        jmp MaskLoop
-    DoneMask:
-        mov BYTE PTR [edi], 0
 
-    GameLoop:
-        cmp guesses_left, 0
-        je  FinalInput
-
-        ; Display Progress
-WRITEMSG mask_buffer
-call CrLf
-
-; Prompt User
-WRITEMSG prompt_char
-
-        mov eax, guesses_left
-        call WriteDec
-        
-        call Crlf
-
-        call ReadChar
-        call WriteChar
-        mov bl, 0           ; Hit flag
-        
-        ; Scan for hits
-        mov esi, OFFSET line_buffer
-        mov edi, OFFSET mask_buffer
-    ScanHits:
-        mov bh, [esi]
-        cmp bh, 0
-        je  ScanDone
-        CMP_NOCASE bh, al
-        jne NoMatch
-        mov [edi], al
-        mov bl, 1
-    NoMatch:
-        inc esi
-        inc edi
-        jmp ScanHits
-    ScanDone:
-        dec guesses_left
-        cmp bl, 1
-        je  Hit
-
-        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
-        WRITEMSG msg_miss
-        jmp GameLoop
-    Hit:
-        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
-        WRITEMSG msg_hit
-        call Crlf
-        jmp GameLoop
-
-    FinalInput:
-        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
-        WRITEMSG mask_buffer
-        call CrLf
-
-        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
-        WRITEMSG prompt_final
-        mov edx, OFFSET user_input
-        mov ecx, SIZEOF user_input
-        call ReadString
-
-        ; Compare user_input to line_buffer
-        mov esi, OFFSET user_input
-        mov edi, OFFSET line_buffer
-
-        call Str_Compare_NOCASE
-        jz  Win
-
-        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
-        WRITEMSG correct_word
-        
-        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
-        WRITEMSG line_buffer
-        
-        call Crlf
-        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
-        WRITEMSG msg_lose
-        call Crlf
-        jmp GameExit
-    Win:
-        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
-        WRITEMSG msg_win
-    GameExit:
-        ret
-PlayGuessingGame ENDP
+;PlayGuessingGame PROC
+;; Logic: 5 single letter guesses, then one final word entry
+;;---------------------------------------------------------
+;    ; Create the mask (underscores)
+;    mov esi, OFFSET line_buffer
+;    mov edi, OFFSET mask_buffer
+;    MaskLoop:
+;        lodsb
+;        cmp al, 0
+;        je  DoneMask
+;        mov BYTE PTR [edi], '_'
+;        inc edi
+;        jmp MaskLoop
+;    DoneMask:
+;        mov BYTE PTR [edi], 0
+;
+;    GameLoop:
+;        cmp guesses_left, 0
+;        je  FinalInput
+;
+;        ; Display Progress
+;WRITEMSG mask_buffer
+;call CrLf
+;
+;; Prompt User
+;WRITEMSG prompt_char
+;
+;        mov eax, guesses_left
+;        call WriteDec
+;        
+;        call Crlf
+;
+;        call ReadChar
+;        call WriteChar
+;        mov bl, 0           ; Hit flag
+;        
+;        ; Scan for hits
+;        mov esi, OFFSET line_buffer
+;        mov edi, OFFSET mask_buffer
+;    ScanHits:
+;        mov bh, [esi]
+;        cmp bh, 0
+;        je  ScanDone
+;        CMP_NOCASE bh, al
+;        jne NoMatch
+;        mov [edi], al
+;        mov bl, 1
+;    NoMatch:
+;        inc esi
+;        inc edi
+;        jmp ScanHits
+;    ScanDone:
+;        dec guesses_left
+;        cmp bl, 1
+;        je  Hit
+;
+;        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
+;        WRITEMSG msg_miss
+;        jmp GameLoop
+;    Hit:
+;        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
+;        WRITEMSG msg_hit
+;        call Crlf
+;        jmp GameLoop
+;
+;    FinalInput:
+;        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
+;        WRITEMSG mask_buffer
+;        call CrLf
+;
+;        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
+;        WRITEMSG prompt_final
+;        mov edx, OFFSET user_input
+;        mov ecx, SIZEOF user_input
+;        call ReadString
+;
+;        ; Compare user_input to line_buffer
+;        mov esi, OFFSET user_input
+;        mov edi, OFFSET line_buffer
+;
+;        call Str_Compare_NOCASE
+;        jz  Win
+;
+;        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
+;        WRITEMSG correct_word
+;        
+;        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
+;        WRITEMSG line_buffer
+;        
+;        call Crlf
+;        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
+;        WRITEMSG msg_lose
+;        call Crlf
+;        jmp GameExit
+;    Win:
+;        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
+;        WRITEMSG msg_win
+;    GameExit:
+;        ret
+;PlayGuessingGame ENDP
 
 
 END main
