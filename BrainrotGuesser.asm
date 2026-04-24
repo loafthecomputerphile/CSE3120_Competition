@@ -235,6 +235,50 @@ DrawWordLine PROC
         ret
 DrawWordLine ENDP
 
+DrawLivesLine PROC
+    pushad
+    SET_COLOR CLR_PROMPT
+    GOTO_XY INNER_LEFT, LIVES_ROW
+    mov edx, OFFSET livesLbl
+    call WriteString
+
+    ; ♥  for each life remaining  (CP437 03h = ♥)
+    SET_COLOR CLR_LIVES
+    mov ecx, guesses_left
+    cmp ecx, 0
+    je  DLL_DoEmpty
+    DLL_HeartLoop:
+        mov al, 03h
+        call WriteChar
+        mov al, ' '
+        call WriteChar
+        loop DLL_HeartLoop
+
+    DLL_DoEmpty:
+        ; dimmed x for each life spent
+        SET_COLOR CLR_DIMMED
+        mov ecx, 5
+        sub ecx, guesses_left
+        cmp ecx, 0
+        je  DLL_Done
+    DLL_XLoop:
+        mov al, 'x'
+        call WriteChar
+        mov al, ' '
+        call WriteChar
+        loop DLL_XLoop
+
+    DLL_Done:
+        ; trailing spaces to erase previous state
+        mov ecx, 8
+        mov al, ' '
+    DLL_Pad:
+        call WriteChar
+        loop DLL_Pad
+        popad
+        ret
+DrawLivesLine ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
