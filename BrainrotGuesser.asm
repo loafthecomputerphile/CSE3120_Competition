@@ -104,6 +104,78 @@ OPENFILEREAD MACRO
     INVOKE ReadFile, file_handle, ADDR file_buffer, 4096, ADDR bytes_read, 0
 ENDM
 
+DrawBorder PROC
+    pushad
+    call ClrScr
+    SET_COLOR CLR_BORDER
+
+    ; ╔ top-left
+    GOTO_XY BOX_LEFT, BOX_TOP
+    mov al, 0C9h
+    call WriteChar
+
+    ; top edge ══...══
+    mov dl, BOX_LEFT + 1
+    mov dh, BOX_TOP
+    mov ecx, BOX_WIDTH - 2
+    DB_TopLoop:
+        call Gotoxy
+        mov al, 0CDh
+        call WriteChar
+        inc dl
+        loop DB_TopLoop
+
+        ; ╗ top-right
+        mov dl, BOX_LEFT + BOX_WIDTH - 1
+        mov dh, BOX_TOP
+        call Gotoxy
+        mov al, 0BBh
+        call WriteChar
+
+        ; side walls ║ ... ║
+        mov dh, BOX_TOP + 1
+        mov ecx, BOX_HEIGHT - 2
+    DB_SideLoop:
+        mov dl, BOX_LEFT
+        call Gotoxy
+        mov al, 0BAh
+        call WriteChar
+        mov dl, BOX_LEFT + BOX_WIDTH - 1
+        call Gotoxy
+        mov al, 0BAh
+        call WriteChar
+        inc dh
+        loop DB_SideLoop
+
+        ; ╚ bottom-left
+        mov dl, BOX_LEFT
+        mov dh, BOT_ROW
+        call Gotoxy
+        mov al, 0C8h
+        call WriteChar
+
+        ; bottom edge ══...══
+        mov dl, BOX_LEFT + 1
+        mov dh, BOT_ROW
+        mov ecx, BOX_WIDTH - 2
+    DB_BotLoop:
+        call Gotoxy
+        mov al, 0CDh
+        call WriteChar
+        inc dl
+        loop DB_BotLoop
+
+        ; ╝ bottom-right
+        mov dl, BOX_LEFT + BOX_WIDTH - 1
+        mov dh, BOT_ROW
+        call Gotoxy
+        mov al, 0BCh
+        call WriteChar
+
+        popad
+        ret
+DrawBorder ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
