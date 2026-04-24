@@ -300,6 +300,33 @@ DrawStatusHit PROC
     ret
 DrawStatusHit ENDP
 
+
+DrawStatusMiss PROC
+    pushad
+    call ClearStatusLine
+    SET_COLOR CLR_MISS
+    GOTO_XY INNER_LEFT, STATUS_ROW
+    mov edx, OFFSET missMsg2
+    call WriteString
+    popad
+    ret
+DrawStatusMiss ENDP
+
+DrawWinScreen PROC
+    pushad
+    SET_COLOR CLR_WIN
+    GOTO_XY INNER_LEFT, INPUT_ROW
+    mov edx, OFFSET blankLine30
+    call WriteString
+    GOTO_XY INNER_LEFT, INPUT_ROW
+    mov edx, OFFSET winMsg2
+    call WriteString
+    call ClearStatusLine
+    popad
+    ret
+DrawWinScreen ENDP
+
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
