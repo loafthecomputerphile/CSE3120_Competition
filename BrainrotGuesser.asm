@@ -206,6 +206,16 @@ DrawHDivider PROC
         ret
 DrawHDivider ENDP
 
+DrawTitle PROC
+    pushad
+    SET_COLOR CLR_TITLE
+    GOTO_XY INNER_LEFT, TITLE_ROW
+    mov edx, OFFSET titleStr
+    call WriteString
+    popad
+    ret
+DrawTitle ENDP
+
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
