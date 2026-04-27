@@ -1,74 +1,139 @@
-
 INCLUDE Irvine32.inc
 
 BOX_LEFT    EQU 5
 BOX_TOP     EQU 2
 BOX_WIDTH   EQU 50
-BOX_HEIGHT  EQU 14
+BOX_HEIGHT  EQU 22          ; tall enough for 6-row gallows art
 
 INNER_LEFT  EQU BOX_LEFT  + 2       ; 7
 TITLE_ROW   EQU BOX_TOP   + 1       ; 3
-DIV1_ROW    EQU BOX_TOP   + 2       ; 4  (below title)
+DIV1_ROW    EQU BOX_TOP   + 2       ; 4
 WORD_ROW    EQU BOX_TOP   + 3       ; 5
-DIV2_ROW    EQU BOX_TOP   + 4       ; 6  (below word)
+DIV2_ROW    EQU BOX_TOP   + 4       ; 6
 LIVES_ROW   EQU BOX_TOP   + 5       ; 7
-DIV3_ROW    EQU BOX_TOP   + 6       ; 8  (below lives)
-INPUT_ROW   EQU BOX_TOP   + 7       ; 9
-STATUS_ROW  EQU BOX_TOP   + 8       ; 10
-BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 15
+DIV3_ROW    EQU BOX_TOP   + 6       ; 8
 
-CLR_NORMAL  EQU 07h    ; gray
-CLR_BORDER  EQU 0Bh    ; light cyan
-CLR_TITLE   EQU 0Eh    ; yellow
-CLR_PROMPT  EQU 0Eh    ; yellow
-CLR_WORD    EQU 0Fh    ; bright white
-CLR_LIVES   EQU 0Ch    ; light red  (hearts)
-CLR_DIMMED  EQU 08h    ; dark gray  (used lives)
-CLR_HIT     EQU 0Ah    ; light green
-CLR_MISS    EQU 0Ch    ; light red
-CLR_WIN     EQU 0Ah    ; light green
-CLR_LOSE    EQU 0Ch    ; light red
+; ── NEW: gallows art rows (6 rows inside box) ─────────────────────────────
+HANG_ROW1   EQU BOX_TOP   + 7       ; 9
+HANG_ROW2   EQU BOX_TOP   + 8       ; 10
+HANG_ROW3   EQU BOX_TOP   + 9       ; 11
+HANG_ROW4   EQU BOX_TOP   + 10      ; 12
+HANG_ROW5   EQU BOX_TOP   + 11      ; 13
+HANG_ROW6   EQU BOX_TOP   + 12      ; 14
+DIV4_ROW    EQU BOX_TOP   + 13      ; 15  divider below gallows
+; ──────────────────────────────────────────────────────────────────────────
+
+INPUT_ROW   EQU BOX_TOP   + 14      ; 16
+STATUS_ROW  EQU BOX_TOP   + 15      ; 17
+BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 19
+
+CLR_NORMAL  EQU 07h
+CLR_BORDER  EQU 0Bh
+CLR_TITLE   EQU 0Eh
+CLR_PROMPT  EQU 0Eh
+CLR_WORD    EQU 0Fh
+CLR_LIVES   EQU 0Ch
+CLR_DIMMED  EQU 08h
+CLR_HIT     EQU 0Ah
+CLR_MISS    EQU 0Ch
+CLR_WIN     EQU 0Ah
+CLR_LOSE    EQU 0Ch
+CLR_HANG    EQU 0Ch    ; NEW: red for hangman art
 
 .data
     databaseName    BYTE "brainrot_database.txt", 0
-    filename_copy   BYTE 256 DUP(0)          ; stored filename for LoadFileLine
-    line_buffer     BYTE 1024 DUP(0)         ; holds one line (null‑terminated)
-    file_buffer     BYTE 4096 DUP(0)         ; temporary read buffer
+    filename_copy   BYTE 256 DUP(0)
+    line_buffer     BYTE 1024 DUP(0)
+    file_buffer     BYTE 4096 DUP(0)
 
-    ; variables used by LoadFileLine
-    target_line     DWORD ?                   ; requested line number
-    current_line    DWORD ?                   ; line counter while reading
-    is_copying      BYTE ?                     ; flag: 1 = copying target line
+    target_line     DWORD ?
+    current_line    DWORD ?
+    is_copying      BYTE ?
 
-    file_handle       DWORD ?
-    bytes_read        DWORD ?
+    file_handle     DWORD ?
+    bytes_read      DWORD ?
 
+    prompt_char     BYTE "Guess a letter. Attempts Left: ", 0
+    prompt_final    BYTE "Final chance! Type the whole word: ", 0
+    msg_hit         BYTE " Found a match!", 13, 10, 0
+    msg_miss        BYTE " Not in the word.", 13, 10, 0
+    msg_win         BYTE "You got it! You win!", 13, 10, 0
+    msg_lose        BYTE "Incorrect. Game Over.", 13, 10, 0
+    correct_word    BYTE "The correct brainrot was: ", 0
+    space           BYTE " ", 0
 
-    prompt_char   BYTE "Guess a letter. Attempts Left: ", 0
-    prompt_final  BYTE "Final chance! Type the whole word: ", 0
-    msg_hit       BYTE " Found a match!", 13, 10, 0
-    msg_miss      BYTE " Not in the word.", 13, 10, 0
-    msg_win       BYTE "You got it! You win!", 13, 10, 0
-    msg_lose      BYTE "Incorrect. Game Over.", 13, 10, 0
-    correct_word  BYTE "The correct brainrot was: ", 0
-    space         BYTE  " ", 0
-    
-    mask_buffer   BYTE 1024 DUP(0)  ; Holds underscores like "_ _ _ _"
-    user_input    BYTE 1024 DUP(0)  ; Holds the final word guess
-    guesses_left  DWORD 5
+    mask_buffer     BYTE 1024 DUP(0)
+    user_input      BYTE 1024 DUP(0)
+    guesses_left    DWORD 5
 
+    titleStr        BYTE "   >> BRAINROT GUESSER <<   ", 0
+    wordLbl         BYTE "WORD:  ", 0
+    livesLbl        BYTE "LIVES: ", 0
+    inputLbl        BYTE "Guess a letter: ", 0
+    finalLbl        BYTE "Final guess - type the word: ", 0
+    hitMsg2         BYTE " >> Found it! No cap.        ", 0
+    missMsg2        BYTE " >> Not in the word. L ratio  ", 0
+    winMsg2         BYTE "  YOU WIN! Sigma rizz achieved! ", 0
+    loseMsg2        BYTE "  GAME OVER. You got cooked.    ", 0
+    answerLbl       BYTE "  The brainrot was: ", 0
+    blankLine30     BYTE "                              ", 0
+    blankLine50     BYTE "                                                  ", 0  ; NEW: wider blank for hangman rows
 
-    titleStr    BYTE "   >> BRAINROT GUESSER <<   ", 0
-    wordLbl     BYTE "WORD:  ", 0
-    livesLbl    BYTE "LIVES: ", 0
-    inputLbl    BYTE "Guess a letter: ", 0
-    finalLbl    BYTE "Final guess - type the word: ", 0
-    hitMsg2     BYTE " >> Found it! No cap.        ", 0
-    missMsg2    BYTE " >> Not in the word. L ratio  ", 0
-    winMsg2     BYTE "  YOU WIN! Sigma rizz achieved! ", 0
-    loseMsg2    BYTE "  GAME OVER. You got cooked.    ", 0
-    answerLbl   BYTE "  The brainrot was: ", 0
-    blankLine30 BYTE "                              ", 0   ; 30 spaces
+    ; ── NEW: classic gallows art (6 rows x 6 stages) ────────────────────────
+    ; every stage always prints all 6 rows so stale chars get overwritten
+
+    ; Stage 0 — 5 lives — just the gallows frame
+    hang0_r1  BYTE "   _____          ", 0
+    hang0_r2  BYTE "  |     |         ", 0
+    hang0_r3  BYTE "  |               ", 0
+    hang0_r4  BYTE "  |               ", 0
+    hang0_r5  BYTE "  |               ", 0
+    hang0_r6  BYTE " _|_              ", 0
+
+    ; Stage 1 — 4 lives — add head
+    hang1_r1  BYTE "   _____          ", 0
+    hang1_r2  BYTE "  |     |         ", 0
+    hang1_r3  BYTE "  |     O         ", 0
+    hang1_r4  BYTE "  |               ", 0
+    hang1_r5  BYTE "  |               ", 0
+    hang1_r6  BYTE " _|_              ", 0
+
+    ; Stage 2 — 3 lives — add body
+    hang2_r1  BYTE "   _____          ", 0
+    hang2_r2  BYTE "  |     |         ", 0
+    hang2_r3  BYTE "  |     O         ", 0
+    hang2_r4  BYTE "  |     |         ", 0
+    hang2_r5  BYTE "  |               ", 0
+    hang2_r6  BYTE " _|_              ", 0
+
+    ; Stage 3 — 2 lives — add left arm
+    hang3_r1  BYTE "   _____          ", 0
+    hang3_r2  BYTE "  |     |         ", 0
+    hang3_r3  BYTE "  |     O         ", 0
+    hang3_r4  BYTE "  |    /|         ", 0
+    hang3_r5  BYTE "  |               ", 0
+    hang3_r6  BYTE " _|_              ", 0
+
+    ; Stage 4 — 1 life — add right arm
+    hang4_r1  BYTE "   _____          ", 0
+    hang4_r2  BYTE "  |     |         ", 0
+    hang4_r3  BYTE "  |     O         ", 0
+    hang4_r4  BYTE "  |    /|\        ", 0
+    hang4_r5  BYTE "  |               ", 0
+    hang4_r6  BYTE " _|_              ", 0
+
+    ; Stage 5 — 0 lives — add legs, fully dead
+    hang5_r1  BYTE "   _____          ", 0
+    hang5_r2  BYTE "  |     |         ", 0
+    hang5_r3  BYTE "  |     O         ", 0
+    hang5_r4  BYTE "  |    /|\        ", 0
+    hang5_r5  BYTE "  |    / \        ", 0
+    hang5_r6  BYTE " _|_              ", 0
+    ; ────────────────────────────────────────────────────────────────────────
+
+    ; NEW: play again prompt
+    playAgainMsg  BYTE "  Play again? (Y/N): ", 0
+    playAgainIn   BYTE 4 DUP(0)
 
 .code
 
@@ -83,15 +148,28 @@ GOTO_XY MACRO col, row
     call Gotoxy
 ENDM
 
-
 main PROC
-    call Randomize              ; Seed the random generator
+    call Randomize
 
-    call GetRandomFileLine      ; Returns index in EAX
-    
-    call LoadFileLine           ; EAX is already the input
+    ; ── NEW: play again loop wraps everything ─────────────────────────────
+    MainLoop:
+        mov guesses_left, 5         ; NEW: reset lives each round
 
-    call PlayGuessingGame
+        call GetRandomFileLine
+        call LoadFileLine
+        call PlayGuessingGame
+
+        ; NEW: ask play again
+        SET_COLOR CLR_PROMPT
+        GOTO_XY INNER_LEFT, BOT_ROW + 1
+        mov edx, OFFSET playAgainMsg
+        call WriteString
+        call ReadChar
+        call WriteChar
+        or al, 20h                  ; to lowercase
+        cmp al, 'y'
+        je  MainLoop
+    ; ──────────────────────────────────────────────────────────────────────
 
     exit
 main ENDP
@@ -109,12 +187,10 @@ DrawBorder PROC
     call ClrScr
     SET_COLOR CLR_BORDER
 
-    ; ╔ top-left
     GOTO_XY BOX_LEFT, BOX_TOP
     mov al, 0C9h
     call WriteChar
 
-    ; top edge ══...══
     mov dl, BOX_LEFT + 1
     mov dh, BOX_TOP
     mov ecx, BOX_WIDTH - 2
@@ -125,16 +201,14 @@ DrawBorder PROC
         inc dl
         loop DB_TopLoop
 
-        ; ╗ top-right
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        mov dh, BOX_TOP
-        call Gotoxy
-        mov al, 0BBh
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    mov dh, BOX_TOP
+    call Gotoxy
+    mov al, 0BBh
+    call WriteChar
 
-        ; side walls ║ ... ║
-        mov dh, BOX_TOP + 1
-        mov ecx, BOX_HEIGHT - 2
+    mov dh, BOX_TOP + 1
+    mov ecx, BOX_HEIGHT - 2
     DB_SideLoop:
         mov dl, BOX_LEFT
         call Gotoxy
@@ -147,17 +221,15 @@ DrawBorder PROC
         inc dh
         loop DB_SideLoop
 
-        ; ╚ bottom-left
-        mov dl, BOX_LEFT
-        mov dh, BOT_ROW
-        call Gotoxy
-        mov al, 0C8h
-        call WriteChar
+    mov dl, BOX_LEFT
+    mov dh, BOT_ROW
+    call Gotoxy
+    mov al, 0C8h
+    call WriteChar
 
-        ; bottom edge ══...══
-        mov dl, BOX_LEFT + 1
-        mov dh, BOT_ROW
-        mov ecx, BOX_WIDTH - 2
+    mov dl, BOX_LEFT + 1
+    mov dh, BOT_ROW
+    mov ecx, BOX_WIDTH - 2
     DB_BotLoop:
         call Gotoxy
         mov al, 0CDh
@@ -165,28 +237,25 @@ DrawBorder PROC
         inc dl
         loop DB_BotLoop
 
-        ; ╝ bottom-right
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        mov dh, BOT_ROW
-        call Gotoxy
-        mov al, 0BCh
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    mov dh, BOT_ROW
+    call Gotoxy
+    mov al, 0BCh
+    call WriteChar
 
-        popad
-        ret
+    popad
+    ret
 DrawBorder ENDP
 
 DrawHDivider PROC
     pushad
     SET_COLOR CLR_BORDER
 
-    ; ╠ left junction
     mov dl, BOX_LEFT
     call Gotoxy
     mov al, 0CCh
     call WriteChar
 
-    ; ═ fill
     mov dl, BOX_LEFT + 1
     mov ecx, BOX_WIDTH - 2
     DHD_Loop:
@@ -196,14 +265,13 @@ DrawHDivider PROC
         inc dl
         loop DHD_Loop
 
-        ; ╣ right junction
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        call Gotoxy
-        mov al, 0B9h
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    call Gotoxy
+    mov al, 0B9h
+    call WriteChar
 
-        popad
-        ret
+    popad
+    ret
 DrawHDivider ENDP
 
 DrawTitle PROC
@@ -225,14 +293,13 @@ DrawWordLine PROC
     SET_COLOR CLR_WORD
     mov edx, OFFSET mask_buffer
     call WriteString
-    ; pad so stale chars from a longer previous mask are erased
     mov ecx, 20
     mov al, ' '
     DWL_Pad:
         call WriteChar
         loop DWL_Pad
-        popad
-        ret
+    popad
+    ret
 DrawWordLine ENDP
 
 DrawLivesLine PROC
@@ -254,7 +321,6 @@ DrawLivesLine PROC
         loop DLL_HeartLoop
 
     DLL_DoEmpty:
-        ; dimmed x for each life spent
         SET_COLOR CLR_DIMMED
         mov ecx, 5
         sub ecx, guesses_left
@@ -268,15 +334,163 @@ DrawLivesLine PROC
         loop DLL_XLoop
 
     DLL_Done:
-        ; trailing spaces to erase previous state
         mov ecx, 8
         mov al, ' '
     DLL_Pad:
         call WriteChar
         loop DLL_Pad
+    popad
+    ret
+DrawLivesLine ENDP
+
+; ── NEW: DrawHangman - classic gallows, 6 rows, 6 stages ─────────────────
+DrawHangman PROC
+    pushad
+    SET_COLOR CLR_HANG
+
+    mov eax, guesses_left
+    cmp eax, 5
+    je  DH_Stage0
+    cmp eax, 4
+    je  DH_Stage1
+    cmp eax, 3
+    je  DH_Stage2
+    cmp eax, 2
+    je  DH_Stage3
+    cmp eax, 1
+    je  DH_Stage4
+    jmp DH_Stage5
+
+    DH_Stage0:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang0_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang0_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang0_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang0_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang0_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang0_r6
+        call WriteString
+        jmp DH_Done
+
+    DH_Stage1:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang1_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang1_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang1_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang1_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang1_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang1_r6
+        call WriteString
+        jmp DH_Done
+
+    DH_Stage2:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang2_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang2_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang2_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang2_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang2_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang2_r6
+        call WriteString
+        jmp DH_Done
+
+    DH_Stage3:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang3_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang3_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang3_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang3_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang3_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang3_r6
+        call WriteString
+        jmp DH_Done
+
+    DH_Stage4:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang4_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang4_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang4_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang4_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang4_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang4_r6
+        call WriteString
+        jmp DH_Done
+
+    DH_Stage5:
+        GOTO_XY INNER_LEFT, HANG_ROW1
+        mov edx, OFFSET hang5_r1
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW2
+        mov edx, OFFSET hang5_r2
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW3
+        mov edx, OFFSET hang5_r3
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW4
+        mov edx, OFFSET hang5_r4
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW5
+        mov edx, OFFSET hang5_r5
+        call WriteString
+        GOTO_XY INNER_LEFT, HANG_ROW6
+        mov edx, OFFSET hang5_r6
+        call WriteString
+
+    DH_Done:
         popad
         ret
-DrawLivesLine ENDP
+DrawHangman ENDP
+; ──────────────────────────────────────────────────────────────────────────
 
 ClearStatusLine PROC
     pushad
@@ -298,7 +512,6 @@ DrawStatusHit PROC
     popad
     ret
 DrawStatusHit ENDP
-
 
 DrawStatusMiss PROC
     pushad
@@ -344,20 +557,16 @@ DrawLoseScreen PROC
     ret
 DrawLoseScreen ENDP
 
-
 CMP_NOCASE MACRO char1, char2
     LOCAL skip1, skip2
     push eax
     push ebx
-    ;; Convert char1 to uppercase if it's a lowercase letter
     cmp char1, 'a'
     jb  skip1
     cmp char1, 'z'
     ja  skip1
-    and char1, 11011111b    ;; to uppercase (0xDF)
+    and char1, 11011111b
     skip1:
-
-        ;; Convert char2 to uppercase if it's a lowercase letter
         cmp char2, 'a'
         jb  skip2
         cmp char2, 'z'
@@ -368,78 +577,61 @@ CMP_NOCASE MACRO char1, char2
         pop ebx
         pop eax
 ENDM
-;NEW MACRO
+
 WRITEMSG MACRO varName
-    mov edx, OFFSET varName     ; moved the offset of varName into edx
-    call WriteString            ; print the string
+    mov edx, OFFSET varName
+    call WriteString
 ENDM
 
-; input: esi = pointer to string 1, edi = pointer to string 2
-; output: zf = 1 if match
 Str_Compare_NOCASE PROC
-    pushad              ; Save all registers
-
+    pushad
     L1:
-        mov al, [esi]      
-        mov bl, [edi]       
-        
-        ; Convert AL to uppercase
+        mov al, [esi]
+        mov bl, [edi]
         cmp al, 'a'
         jb  CheckBL
         cmp al, 'z'
         ja  CheckBL
         and al, 11011111b
     CheckBL:
-        ; Convert BL to uppercase
         cmp bl, 'a'
         jb  CompareChars
         cmp bl, 'z'
         ja  CompareChars
         and bl, 11011111b
-
     CompareChars:
-        cmp al, bl      ; Compare normalized chars
-        jne NotEqual        ; If mismatch, exit
-        
+        cmp al, bl
+        jne NotEqual
         cmp al, 0
         je  StringsMatch
-        
         inc esi
         inc edi
         jmp L1
-
     StringsMatch:
-        popad               ; Restore registers
-        test eax, 0         ; Force Zero Flag = 1
+        popad
+        test eax, 0
         ret
-
     NotEqual:
-        popad               ; Restore registers
-        or eax, 1           ; Force Zero Flag = 0
+        popad
+        or eax, 1
         ret
 Str_Compare_NOCASE ENDP
 
-
-; returns: EAX = random line index (0-based)
 GetRandomFileLine PROC
-    ; 1. Open the file to count total lines
     OPENFILECREATE
     mov file_handle, eax
     cmp eax, INVALID_HANDLE_VALUE
     je  Fail
-
     mov current_line, 0
-
     CountLoop:
         OPENFILEREAD
         cmp bytes_read, 0
         je  EndCount
         mov ecx, bytes_read
         mov esi, OFFSET file_buffer
-
     Scan:
         lodsb
-        cmp al, 0Ah          ; Line Feed found?
+        cmp al, 0Ah
         jne Next
         inc current_line
     Next:
@@ -450,176 +642,58 @@ GetRandomFileLine PROC
         mov eax, current_line
         cmp eax, 0
         je  Fail
-        call RandomRange     ; Returns [0 to current_line-1] in EAX
+        call RandomRange
         ret
     Fail:
         xor eax, eax
         ret
-    
 GetRandomFileLine ENDP
 
-
-; input: EAX = line index to retrieve
 LoadFileLine PROC
     mov target_line, eax
     mov current_line, 0
     mov is_copying, 0
-    
     OPENFILECREATE
     mov file_handle, eax
     cmp eax, INVALID_HANDLE_VALUE
     je  LoadExit
-
     mov edi, OFFSET line_buffer
-
     ReadLoop:
         OPENFILEREAD
         cmp bytes_read, 0
         je  CloseAndExit
-        
         mov ecx, bytes_read
         mov esi, OFFSET file_buffer
-
     Process:
         lodsb
         mov bl, al
-        
         mov edx, current_line
         cmp edx, target_line
         jne Skip
-
-        ; We are at the target line
         mov is_copying, 1
-        cmp bl, 0Dh          ; Carriage Return?
+        cmp bl, 0Dh
         je  Finish
-        cmp bl, 0Ah          ; Line Feed?
+        cmp bl, 0Ah
         je  Finish
-        
-        mov [edi], bl        ; Copy char to line_buffer
+        mov [edi], bl
         inc edi
         jmp NextChar
-
     Skip:
         cmp bl, 0Ah
         jne NextChar
         inc current_line
-
     NextChar:
         loop Process
         jmp  ReadLoop
-
     Finish:
-        mov BYTE PTR [edi], 0 ; Null terminate
+        mov BYTE PTR [edi], 0
     CloseAndExit:
         INVOKE CloseHandle, file_handle
     LoadExit:
         ret
 LoadFileLine ENDP
 
-
-;PlayGuessingGame PROC
-;; Logic: 5 single letter guesses, then one final word entry
-;;---------------------------------------------------------
-;    ; Create the mask (underscores)
-;    mov esi, OFFSET line_buffer
-;    mov edi, OFFSET mask_buffer
-;    MaskLoop:
-;        lodsb
-;        cmp al, 0
-;        je  DoneMask
-;        mov BYTE PTR [edi], '_'
-;        inc edi
-;        jmp MaskLoop
-;    DoneMask:
-;        mov BYTE PTR [edi], 0
-;
-;    GameLoop:
-;        cmp guesses_left, 0
-;        je  FinalInput
-;
-;        ; Display Progress
-;WRITEMSG mask_buffer
-;call CrLf
-;
-;; Prompt User
-;WRITEMSG prompt_char
-;
-;        mov eax, guesses_left
-;        call WriteDec
-;        
-;        call Crlf
-;
-;        call ReadChar
-;        call WriteChar
-;        mov bl, 0           ; Hit flag
-;        
-;        ; Scan for hits
-;        mov esi, OFFSET line_buffer
-;        mov edi, OFFSET mask_buffer
-;    ScanHits:
-;        mov bh, [esi]
-;        cmp bh, 0
-;        je  ScanDone
-;        CMP_NOCASE bh, al
-;        jne NoMatch
-;        mov [edi], al
-;        mov bl, 1
-;    NoMatch:
-;        inc esi
-;        inc edi
-;        jmp ScanHits
-;    ScanDone:
-;        dec guesses_left
-;        cmp bl, 1
-;        je  Hit
-;
-;        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
-;        WRITEMSG msg_miss
-;        jmp GameLoop
-;    Hit:
-;        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_hit
-;        call Crlf
-;        jmp GameLoop
-;
-;    FinalInput:
-;        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
-;        WRITEMSG mask_buffer
-;        call CrLf
-;
-;        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
-;        WRITEMSG prompt_final
-;        mov edx, OFFSET user_input
-;        mov ecx, SIZEOF user_input
-;        call ReadString
-;
-;        ; Compare user_input to line_buffer
-;        mov esi, OFFSET user_input
-;        mov edi, OFFSET line_buffer
-;
-;        call Str_Compare_NOCASE
-;        jz  Win
-;
-;        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
-;        WRITEMSG correct_word
-;        
-;        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
-;        WRITEMSG line_buffer
-;        
-;        call Crlf
-;        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_lose
-;        call Crlf
-;        jmp GameExit
-;    Win:
-;        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_win
-;    GameExit:
-;        ret
-;PlayGuessingGame ENDP
-
 PlayGuessingGame PROC
-    ;-- build mask (_ for every char) --------------------------
     mov esi, OFFSET line_buffer
     mov edi, OFFSET mask_buffer
     PGG_MaskLoop:
@@ -632,31 +706,29 @@ PlayGuessingGame PROC
     PGG_DoneMask:
         mov BYTE PTR [edi], 0
 
-        ;-- draw static frame once ---------------------------------
         call DrawBorder
         call DrawTitle
-        mov dh, DIV1_ROW  
-        call DrawHDivider   ; ← won't assemble on one line;
-        ; write each divider call on its own line:
         mov dh, DIV1_ROW
         call DrawHDivider
         mov dh, DIV2_ROW
         call DrawHDivider
         mov dh, DIV3_ROW
         call DrawHDivider
+        mov dh, DIV4_ROW          ; NEW: divider below hangman art
+        call DrawHDivider
 
         call DrawWordLine
         call DrawLivesLine
+        call DrawHangman          ; NEW: draw initial (empty) hangman
 
-        ;-- main letter-guess loop ---------------------------------
     PGG_GameLoop:
         cmp guesses_left, 0
         je  PGG_FinalInput
 
         call DrawWordLine
         call DrawLivesLine
+        call DrawHangman          ; NEW: redraw hangman after each guess
 
-        ; clear + redraw input prompt
         SET_COLOR CLR_NORMAL
         GOTO_XY INNER_LEFT, INPUT_ROW
         mov edx, OFFSET blankLine30
@@ -666,14 +738,13 @@ PlayGuessingGame PROC
         mov edx, OFFSET inputLbl
         call WriteString
 
-        ; place cursor right after the prompt text (16 chars wide)
         SET_COLOR CLR_WORD
         GOTO_XY INNER_LEFT + 16, INPUT_ROW
 
         call ReadChar
-        call WriteChar              ; echo the letter
+        call WriteChar
 
-        mov bl, 0                   ; hit flag
+        mov bl, 0
 
         mov esi, OFFSET line_buffer
         mov edi, OFFSET mask_buffer
@@ -699,10 +770,10 @@ PlayGuessingGame PROC
         call DrawStatusHit
         jmp PGG_GameLoop
 
-        ;-- final full-word guess -----------------------------------
     PGG_FinalInput:
         call DrawWordLine
         call DrawLivesLine
+        call DrawHangman          ; NEW: show full hangman on final guess
         call ClearStatusLine
 
         SET_COLOR CLR_PROMPT
@@ -713,7 +784,6 @@ PlayGuessingGame PROC
         mov edx, OFFSET finalLbl
         call WriteString
 
-        ; read the guess on STATUS_ROW so it sits inside the box
         SET_COLOR CLR_WORD
         GOTO_XY INNER_LEFT, STATUS_ROW
         mov edx, OFFSET blankLine30
@@ -734,9 +804,8 @@ PlayGuessingGame PROC
         call DrawWinScreen
     PGG_GameExit:
         SET_COLOR CLR_NORMAL
-        GOTO_XY 0, BOT_ROW + 2     ; move cursor below box before exit
+        GOTO_XY 0, BOT_ROW + 2
         ret
 PlayGuessingGame ENDP
-
 
 END main
