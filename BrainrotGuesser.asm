@@ -170,6 +170,39 @@ AddUsedLetter PROC
         ret
 AddUsedLetter ENDP
 
+DrawUsedLine PROC
+    pushad
+ 
+    ; Blank the row first so stale chars are cleared
+    SET_COLOR CLR_NORMAL
+    GOTO_XY INNER_LEFT, USED_ROW
+    mov edx, OFFSET blankLine46
+    call WriteString
+ 
+    ; Label
+    SET_COLOR CLR_PROMPT
+    GOTO_XY INNER_LEFT, USED_ROW
+    mov edx, OFFSET usedLbl
+    call WriteString
+ 
+    ; Letters (space-separated)
+    SET_COLOR CLR_WORD
+    mov esi, OFFSET used_letters
+    DUL_Loop:
+        mov al, [esi]
+        cmp al, 0
+        je  DUL_Done
+        call WriteChar
+        mov al, ' '
+        call WriteChar
+        inc esi
+        jmp DUL_Loop
+    
+    DUL_Done:
+        popad
+        ret
+DrawUsedLine ENDP
+
 DrawBorder PROC
     pushad
     call ClrScr
