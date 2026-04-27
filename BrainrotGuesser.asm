@@ -147,6 +147,29 @@ IsLetterUsed PROC
         ret
 IsLetterUsed ENDP
 
+AddUsedLetter PROC
+    pushad
+    mov cl, al
+ 
+    ; Normalize letters only
+    cmp cl, 'a'
+    jb  ALU_Store
+    cmp cl, 'z'
+    ja  ALU_Store
+    and cl, 11011111b
+ 
+    ALU_Store:
+        mov edi, OFFSET used_letters
+        add edi, used_count         ; point past existing chars
+        mov [edi], cl               ; store new char
+        inc edi
+        mov BYTE PTR [edi], 0       ; keep null-terminated
+        inc used_count
+    
+        popad
+        ret
+AddUsedLetter ENDP
+
 DrawBorder PROC
     pushad
     call ClrScr
