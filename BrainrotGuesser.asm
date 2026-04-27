@@ -30,6 +30,7 @@ CLR_HIT     EQU 0Ah    ; light green
 CLR_MISS    EQU 0Ch    ; light red
 CLR_WIN     EQU 0Ah    ; light green
 CLR_LOSE    EQU 0Ch    ; light red
+CLR_USED    EQU 0Dh    ; light magenta
 
 .data
     databaseName    BYTE "brainrot_database.txt", 0
@@ -169,6 +170,17 @@ AddUsedLetter PROC
         popad
         ret
 AddUsedLetter ENDP
+
+DrawStatusUsed PROC
+    pushad
+    call ClearStatusLine
+    SET_COLOR CLR_USED
+    GOTO_XY INNER_LEFT, STATUS_ROW
+    mov edx, OFFSET dupMsg2
+    call WriteString
+    popad
+    ret
+DrawStatusUsed ENDP
 
 DrawUsedLine PROC
     pushad
@@ -616,106 +628,6 @@ LoadFileLine PROC
 LoadFileLine ENDP
 
 
-;PlayGuessingGame PROC
-;; Logic: 5 single letter guesses, then one final word entry
-;;---------------------------------------------------------
-;    ; Create the mask (underscores)
-;    mov esi, OFFSET line_buffer
-;    mov edi, OFFSET mask_buffer
-;    MaskLoop:
-;        lodsb
-;        cmp al, 0
-;        je  DoneMask
-;        mov BYTE PTR [edi], '_'
-;        inc edi
-;        jmp MaskLoop
-;    DoneMask:
-;        mov BYTE PTR [edi], 0
-;
-;    GameLoop:
-;        cmp guesses_left, 0
-;        je  FinalInput
-;
-;        ; Display Progress
-;WRITEMSG mask_buffer
-;call CrLf
-;
-;; Prompt User
-;WRITEMSG prompt_char
-;
-;        mov eax, guesses_left
-;        call WriteDec
-;        
-;        call Crlf
-;
-;        call ReadChar
-;        call WriteChar
-;        mov bl, 0           ; Hit flag
-;        
-;        ; Scan for hits
-;        mov esi, OFFSET line_buffer
-;        mov edi, OFFSET mask_buffer
-;    ScanHits:
-;        mov bh, [esi]
-;        cmp bh, 0
-;        je  ScanDone
-;        CMP_NOCASE bh, al
-;        jne NoMatch
-;        mov [edi], al
-;        mov bl, 1
-;    NoMatch:
-;        inc esi
-;        inc edi
-;        jmp ScanHits
-;    ScanDone:
-;        dec guesses_left
-;        cmp bl, 1
-;        je  Hit
-;
-;        ; CHANGE: replaced "mov edx, OFFSET msg_miss / call WriteString" with WRITEMSG
-;        WRITEMSG msg_miss
-;        jmp GameLoop
-;    Hit:
-;        ; CHANGE: replaced "mov edx, OFFSET msg_hit / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_hit
-;        call Crlf
-;        jmp GameLoop
-;
-;    FinalInput:
-;        ; CHANGE: replaced "mov edx, OFFSET mask_buffer / call WriteString" with WRITEMSG ***
-;        WRITEMSG mask_buffer
-;        call CrLf
-;
-;        ; CHANGE: replaced "mov edx, OFFSET prompt_final / call WriteString" with WRITEMSG ***
-;        WRITEMSG prompt_final
-;        mov edx, OFFSET user_input
-;        mov ecx, SIZEOF user_input
-;        call ReadString
-;
-;        ; Compare user_input to line_buffer
-;        mov esi, OFFSET user_input
-;        mov edi, OFFSET line_buffer
-;
-;        call Str_Compare_NOCASE
-;        jz  Win
-;
-;        ; CHANGE: replaced "mov edx, OFFSET correct_word / call WriteString" with WRITEMSG ***
-;        WRITEMSG correct_word
-;        
-;        ; CHANGE: replaced "mov edx, OFFSET line_buffer / call WriteString" with WRITEMSG ***
-;        WRITEMSG line_buffer
-;        
-;        call Crlf
-;        ; CHANGE: replaced "mov edx, OFFSET msg_lose / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_lose
-;        call Crlf
-;        jmp GameExit
-;    Win:
-;        ; CHANGE: replaced "mov edx, OFFSET msg_win / call WriteString" with WRITEMSG ***
-;        WRITEMSG msg_win
-;    GameExit:
-;        ret
-;PlayGuessingGame ENDP
 
 PlayGuessingGame PROC
     ;-- build mask (_ for every char) --------------------------
@@ -735,7 +647,7 @@ PlayGuessingGame PROC
         call DrawBorder
         call DrawTitle
         mov dh, DIV1_ROW  
-        call DrawHDivider   ; ← won't assemble on one line;
+        call DrawHDivider   
         ; write each divider call on its own line:
         mov dh, DIV1_ROW
         call DrawHDivider
@@ -743,9 +655,12 @@ PlayGuessingGame PROC
         call DrawHDivider
         mov dh, DIV3_ROW
         call DrawHDivider
+        mov dh, DIV4_ROW
+        call DrawHDivider
 
         call DrawWordLine
         call DrawLivesLine
+        call DrawUsedLine
 
         ;-- main letter-guess loop ---------------------------------
     PGG_GameLoop:
@@ -770,10 +685,20 @@ PlayGuessingGame PROC
         GOTO_XY INNER_LEFT + 16, INPUT_ROW
 
         call ReadChar
+        mov guessed_char, al
         call WriteChar              ; echo the letter
 
-        mov bl, 0                   ; hit flag
+        mov al, guessed_char
+        call IsLetterUsed           ; ZF=1 if already in used_letters
+        jz  PGG_Duplicate
 
+        mov al, guessed_char
+        call AddUsedLetter
+        call DrawUsedLine           ; update USED row immediately
+    
+        mov al, guessed_char        ; restore guessed char for comparison
+        mov bl, 0                   ; hit flag
+    
         mov esi, OFFSET line_buffer
         mov edi, OFFSET mask_buffer
     PGG_ScanHits:
@@ -797,11 +722,15 @@ PlayGuessingGame PROC
     PGG_Hit:
         call DrawStatusHit
         jmp PGG_GameLoop
-
+    
+    PGG_Duplicate:
+        call DrawStatusUsed
+        jmp PGG_GameLoop
         ;-- final full-word guess -----------------------------------
     PGG_FinalInput:
         call DrawWordLine
         call DrawLivesLine
+        call DrawUsedLine
         call ClearStatusLine
 
         SET_COLOR CLR_PROMPT
