@@ -15,6 +15,8 @@ LIVES_ROW   EQU BOX_TOP   + 5       ; 7
 DIV3_ROW    EQU BOX_TOP   + 6       ; 8  (below lives)
 INPUT_ROW   EQU BOX_TOP   + 7       ; 9
 STATUS_ROW  EQU BOX_TOP   + 8       ; 10
+DIV4_ROW    EQU BOX_TOP   + 9       ; 11  (divider below status)
+USED_ROW    EQU BOX_TOP   + 10      ; 12  (used-letters display)
 BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 15
 
 CLR_NORMAL  EQU 07h    ; gray
@@ -56,6 +58,10 @@ CLR_LOSE    EQU 0Ch    ; light red
     mask_buffer   BYTE 1024 DUP(0)  ; Holds underscores like "_ _ _ _"
     user_input    BYTE 1024 DUP(0)  ; Holds the final word guess
     guesses_left  DWORD 5
+    used_letters  BYTE 64 DUP(0)
+    used_count    DWORD 0
+    guessed_char  BYTE ?          ; temp save of the just-read character
+
 
 
     titleStr    BYTE "   >> BRAINROT GUESSER <<   ", 0
@@ -69,6 +75,9 @@ CLR_LOSE    EQU 0Ch    ; light red
     loseMsg2    BYTE "  GAME OVER. You got cooked.    ", 0
     answerLbl   BYTE "  The brainrot was: ", 0
     blankLine30 BYTE "                              ", 0   ; 30 spaces
+    usedLbl     BYTE "USED:  ", 0
+    blankLine46 BYTE "                                              ", 0  ; 46 spaces (clears USED row)
+    dupMsg2     BYTE " >> Already guessed! No attempt lost.", 0
 
 .code
 
@@ -103,6 +112,40 @@ ENDM
 OPENFILEREAD MACRO
     INVOKE ReadFile, file_handle, ADDR file_buffer, 4096, ADDR bytes_read, 0
 ENDM
+
+IsLetterUsed PROC
+    pushad                      ; saves EAX (= the caller's AL in the low byte)
+ 
+    ; Normalize the query char to uppercase if it is a letter
+    mov cl, al
+    cmp cl, 'a'
+    jb  ILU_Scan
+    cmp cl, 'z'
+    ja  ILU_Scan
+    and cl, 11011111b           ; uppercase
+ 
+    ILU_Scan:
+        mov esi, OFFSET used_letters
+    ILU_Loop:
+        mov al, [esi]
+        cmp al, 0
+        je  ILU_NotFound
+        ; The stored chars are already normalized (AddUsedLetter normalizes letters)
+        cmp al, cl
+        je  ILU_Found
+        inc esi
+        jmp ILU_Loop
+    
+    ILU_Found:
+        popad
+        test eax, 0     ; ZF = 1
+        ret
+    
+    ILU_NotFound:
+        popad
+        or  eax, 1      ; ZF = 0
+        ret
+IsLetterUsed ENDP
 
 DrawBorder PROC
     pushad
