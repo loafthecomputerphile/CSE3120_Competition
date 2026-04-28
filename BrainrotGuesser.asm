@@ -1,84 +1,124 @@
-
 INCLUDE Irvine32.inc
 
 BOX_LEFT    EQU 5
 BOX_TOP     EQU 2
-BOX_WIDTH   EQU 50
-BOX_HEIGHT  EQU 14
+BOX_WIDTH   EQU 52
+BOX_HEIGHT  EQU 36
 
 INNER_LEFT  EQU BOX_LEFT  + 2       ; 7
 TITLE_ROW   EQU BOX_TOP   + 1       ; 3
-DIV1_ROW    EQU BOX_TOP   + 2       ; 4  (below title)
+DIV1_ROW    EQU BOX_TOP   + 2       ; 4
 WORD_ROW    EQU BOX_TOP   + 3       ; 5
-DIV2_ROW    EQU BOX_TOP   + 4       ; 6  (below word)
+DIV2_ROW    EQU BOX_TOP   + 4       ; 6
 LIVES_ROW   EQU BOX_TOP   + 5       ; 7
-DIV3_ROW    EQU BOX_TOP   + 6       ; 8  (below lives)
+DIV3_ROW    EQU BOX_TOP   + 6       ; 8
 INPUT_ROW   EQU BOX_TOP   + 7       ; 9
 STATUS_ROW  EQU BOX_TOP   + 8       ; 10
-DIV4_ROW    EQU BOX_TOP   + 9       ; 11  (divider below status)
-USED_ROW    EQU BOX_TOP   + 10      ; 12  (used-letters display)
-BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 15
+DIV4_ROW    EQU BOX_TOP   + 9       ; 11
+USED_ROW    EQU BOX_TOP   + 10      ; 12
+BOT_ROW     EQU BOX_TOP   + BOX_HEIGHT - 1   ; 37
 
-CLR_NORMAL  EQU 07h    ; gray
-CLR_BORDER  EQU 0Bh    ; light cyan
-CLR_TITLE   EQU 0Eh    ; yellow
-CLR_PROMPT  EQU 0Eh    ; yellow
-CLR_WORD    EQU 0Fh    ; bright white
-CLR_LIVES   EQU 0Ch    ; light red  (hearts)
-CLR_DIMMED  EQU 08h    ; dark gray  (used lives)
-CLR_HIT     EQU 0Ah    ; light green
-CLR_MISS    EQU 0Ch    ; light red
-CLR_WIN     EQU 0Ah    ; light green
-CLR_LOSE    EQU 0Ch    ; light red
-CLR_USED    EQU 0Dh    ; light magenta
+SKULL_START  EQU 0
+SKULL_LINES  EQU 36
+GAMEOVER_ROW EQU SKULL_START + SKULL_LINES        ; 36
+ANSWER_ROW   EQU SKULL_START + SKULL_LINES + 1    ; 37
+RESTART_ROW  EQU SKULL_START + SKULL_LINES + 3    ; 39
+
+CLR_NORMAL  EQU 07h
+CLR_BORDER  EQU 0Bh
+CLR_TITLE   EQU 0Eh
+CLR_PROMPT  EQU 0Eh
+CLR_WORD    EQU 0Fh
+CLR_LIVES   EQU 0Ch
+CLR_DIMMED  EQU 08h
+CLR_HIT     EQU 0Ah
+CLR_MISS    EQU 0Ch
+CLR_WIN     EQU 0Ah
+CLR_LOSE    EQU 0Ch
+CLR_USED    EQU 0Dh
 
 .data
     databaseName    BYTE "brainrot_database.txt", 0
-    filename_copy   BYTE 256 DUP(0)          ; stored filename for LoadFileLine
-    line_buffer     BYTE 1024 DUP(0)         ; holds one line (null‑terminated)
-    file_buffer     BYTE 4096 DUP(0)         ; temporary read buffer
+    filename_copy   BYTE 256 DUP(0)
+    line_buffer     BYTE 1024 DUP(0)
+    file_buffer     BYTE 4096 DUP(0)
 
-    ; variables used by LoadFileLine
-    target_line     DWORD ?                   ; requested line number
-    current_line    DWORD ?                   ; line counter while reading
-    is_copying      BYTE ?                     ; flag: 1 = copying target line
+    target_line     DWORD ?
+    current_line    DWORD ?
+    is_copying      BYTE ?
 
-    file_handle       DWORD ?
-    bytes_read        DWORD ?
+    file_handle     DWORD ?
+    bytes_read      DWORD ?
 
+    prompt_char     BYTE "Guess a letter. Attempts Left: ", 0
+    prompt_final    BYTE "Final chance! Type the whole word: ", 0
+    msg_hit         BYTE " Found a match!", 13, 10, 0
+    msg_miss        BYTE " Not in the word.", 13, 10, 0
+    msg_win         BYTE "You got it! You win!", 13, 10, 0
+    msg_lose        BYTE "Incorrect. Game Over.", 13, 10, 0
+    correct_word    BYTE "The correct brainrot was: ", 0
+    space           BYTE " ", 0
 
-    prompt_char   BYTE "Guess a letter. Attempts Left: ", 0
-    prompt_final  BYTE "Final chance! Type the whole word: ", 0
-    msg_hit       BYTE " Found a match!", 13, 10, 0
-    msg_miss      BYTE " Not in the word.", 13, 10, 0
-    msg_win       BYTE "You got it! You win!", 13, 10, 0
-    msg_lose      BYTE "Incorrect. Game Over.", 13, 10, 0
-    correct_word  BYTE "The correct brainrot was: ", 0
-    space         BYTE  " ", 0
-    
-    mask_buffer   BYTE 1024 DUP(0)  ; Holds underscores like "_ _ _ _"
-    user_input    BYTE 1024 DUP(0)  ; Holds the final word guess
-    guesses_left  DWORD 5
-    used_letters  BYTE 64 DUP(0)
-    used_count    DWORD 0
-    guessed_char  BYTE ?          ; temp save of the just-read character
+    mask_buffer     BYTE 1024 DUP(0)
+    user_input      BYTE 1024 DUP(0)
+    guesses_left    DWORD 5
+    used_letters    BYTE 64 DUP(0)
+    used_count      DWORD 0
+    guessed_char    BYTE ?
 
+    titleStr        BYTE "   >> BRAINROT GUESSER <<   ", 0
+    wordLbl         BYTE "WORD:  ", 0
+    livesLbl        BYTE "LIVES: ", 0
+    inputLbl        BYTE "Guess a letter: ", 0
+    finalLbl        BYTE "Final guess - type the word: ", 0
+    hitMsg2         BYTE " >> Found it! No cap.        ", 0
+    missMsg2        BYTE " >> Not in the word. L ratio  ", 0
+    winMsg2         BYTE "  YOU WIN! Sigma rizz achieved! ", 0
+    loseMsg2        BYTE "  GAME OVER. You got cooked.    ", 0
+    answerLbl       BYTE "  The brainrot was: ", 0
+    blankLine30     BYTE "                              ", 0
+    usedLbl         BYTE "USED:  ", 0
+    blankLine46     BYTE "                                              ", 0
+    dupMsg2         BYTE " >> Already guessed! No attempt lost.", 0
+    restartMsg      BYTE "  Play again? (Y/N): ", 0
 
-
-    titleStr    BYTE "   >> BRAINROT GUESSER <<   ", 0
-    wordLbl     BYTE "WORD:  ", 0
-    livesLbl    BYTE "LIVES: ", 0
-    inputLbl    BYTE "Guess a letter: ", 0
-    finalLbl    BYTE "Final guess - type the word: ", 0
-    hitMsg2     BYTE " >> Found it! No cap.        ", 0
-    missMsg2    BYTE " >> Not in the word. L ratio  ", 0
-    winMsg2     BYTE "  YOU WIN! Sigma rizz achieved! ", 0
-    loseMsg2    BYTE "  GAME OVER. You got cooked.    ", 0
-    answerLbl   BYTE "  The brainrot was: ", 0
-    blankLine30 BYTE "                              ", 0   ; 30 spaces
-    usedLbl     BYTE "USED:  ", 0
-    blankLine46 BYTE "                                              ", 0  ; 46 spaces (clears USED row)
-    dupMsg2     BYTE " >> Already guessed! No attempt lost.", 0
+    ; --- Skull art: 36 rows x 80 chars each (verified) ---
+    skullRow00  BYTE "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow01  BYTE "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%&#okkkkho#&B@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow02  BYTE "@@@@@@@@@@@@@@@@@@@@@@@@@8pJYXUCLQ000ZOO00QLJXYCh%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow03  BYTE "@@@@@@@@@@@@@@@@@@@@@BqcXC0ZZmwqqppppppppppqqmOLXz*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow04  BYTE "@@@@@@@@@@@@@@@@@@@ocYQOZwwqqpdddbbbkkkkbbkkbbbdddwm0YXoB@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow05  BYTE "@@@@@@@@@@@@@@@@@kcJQZwqppddbbbbkkkkhkkkkhhhhkkkkbbppwZLzZB@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow06  BYTE "@@@@@@@@@@@@@@@MvU0mwqpddbbkwwhhkhkkpffcLphkhkkkhkkkbdpqmQcqB@@@@@@@@@@@@@@@@@@@", 0
+    skullRow07  BYTE "@@@@@@@@@@@@@@wvLOmwqqqU[-]]]i-hkkkht<_?]]]]?-{whkkkhbbbdqZJz&@@@@@@@@@@@@@@@@@@", 0
+    skullRow08  BYTE "@@@@@@@@@@@@@0zL0Zwwq1+_+~>~ndhkkhkkkkbL|+><++i0kkkkkkbbbpqw0vb@@@@@@@@@@@@@@@@@", 0
+    skullRow09  BYTE "@@@@@@@@@@@@dzCOZZmwwZ}]uZbdbkhkhkkbbkkkkkhhqZpkbbkbkbbdpddpqOcw@@@@@@@@@@@@@@@@", 0
+    skullRow10  BYTE "@@@@@@@@@@@WxJ0OZZZZZmmmwqqddbkhhkbdkkkkbkbdppqppdddddddddddqwOcw@@@@@@@@@@@@@@@", 0
+    skullRow11  BYTE "@@@@@@@@@@@LYL00O00QCJCOmqdbbbdkkkdqpdpdddddppqwmmwqpppdddddppwLuo@@@@@@@@@@@@@@", 0
+    skullRow12  BYTE "@@@@@@@@@@&nJ00000UczC0mqbkkkbbddbdmZmqdkkkkkbdqZZOOmqqppddddppZYzB@@@@@@@@@@@@@", 0
+    skullRow13  BYTE "@@@@@@@@@@huC0000UrrzLmpbkhhhhkpwpqLQwbkhhhhkkkbwZ0LL0mqppppddpmCna@@@@@@@@@@@@@", 0
+    skullRow14  BYTE "@@@@@@@@@@buCQ00LU|fYL0XXZp0CwkbwqQUZQYmoMaLzOqpqm0CXUOwqddpdppm0cc@@@@@@@@@@@@@", 0
+    skullRow15  BYTE "@@@@@@@@@@bnJQ00QU{(tcJCOdo#MWW#wmXvCJJLmdo#MMM*mYunxnLmqpppddpw0zx@@@@@@@@@@@@@", 0
+    skullRow16  BYTE "@@@@@@@@@@#rUQ000LUtjr>',[Xwkoaahqjvj;'';|Cwbkhbdw0YrJ0mqpqppppwOXxB@@@@@@@@@@@@", 0
+    skullRow17  BYTE "@@@@@@@@@@BnYC0000z0tr`   ^xQmwwmOUn)'.  .{XOmmZ0CzrCOZqpppddqqmQzrB@@@@@@@@@@@@", 0
+    skullRow18  BYTE "@@@@@@@@@@@OvCOZZZLcUjx!..'tcUJJXQwOv|^. 'jcXUYYuj|Q0QZqpqpdppwOJvx@@@@@@@@@@@@@", 0
+    skullRow19  BYTE "@@@@@@@@@@@&\J0ZZZOLcuZj\xnrrjrXQLQLC0Yzzvnxjf/)|Jw0QmqqqqppqqZQYxc@@@@@@@@@@@@@", 0
+    skullRow20  BYTE "@@@@@@@@@@@@quLOmmZ0CXuuULLUJJUJQ0OZZQCJL0OQQOqqZLL0ZwqqqppqwmOJvta@@@@@@@@@@@@@", 0
+    skullRow21  BYTE "@@@@@@@@@@@@@uXQZwmO0CUcvcXUUC00ZZmwqpwZmZ0QQQQOOZZwwqqqpwqqmZQzju@@@@@@@@@@@@@@", 0
+    skullRow22  BYTE "@@@@@@@@@@bvLojJ0mZZOOQJJJJL0OmwpqppddddddpppwwwwqqqqqqpqqwmZQUn|o&qxmB@@@@@@@@@", 0
+    skullRow23  BYTE "@@@@@@@@@*LW&#JxCOZZmZOO0Q0ZmwqpdpdbbbkkbbbbbbbbbdddddddpqmZ0Cu)rno&&Ok@@@@@@@@@", 0
+    skullRow24  BYTE "@@@@@@@@kO8@8O(qjCJYL0Z0OOmmqqppppdbkhhhhkkkkkbbbbbdbkdpqmZ0Cc(mB}U#B%dmB@@@@@@@", 0
+    skullRow25  BYTE "@@@@@@@%ZW@@@&0nBQvLJUcxj/\/tjxuczXXUJJJCJCCJUJJLQQLLUvxL0Jr}#@Qv#B@@8ba@@@@@@@@", 0
+    skullRow26  BYTE "@@@@@@BYkB@@@@WzM@@o)-}(tnXJ0OmOmmmmmmmwwwwwmwqmmwmO0LJzvr1]Y@@%to@@@@@MLM@@@@@@", 0
+    skullRow27  BYTE "@@@@@@am@@B8B@@ZX@@@@8U[1){1fnYC0OmwwZwwwm0QCXn\{[}1|||()]0%@@@qc%@@BB@@hZB@@@@@", 0
+    skullRow28  BYTE "@@@@@W#B@*Uab%BUq@@@@@@%#r{(|(1?+~_??__++~~_]{(/jrrrjt)t*@@@@@@ar8@k#zhB@#M@@@@@", 0
+    skullRow29  BYTE "@@@@@da@oz&@o%BCQ@@@@@@@@@BBw/)))((((((|||\tttft|(|c&@B@@@@@@@bx%Bk@%cb@&p8@@@@@", 0
+    skullRow30  BYTE "@@@@@d8@qZ@@&8BJm@@@@@@@@@@@@@@@%#qJvt\(1(\tjX0kWB@@@@@@@@@@@@@knB%*@@bYB@k&@@@@", 0
+    skullRow31  BYTE "@@@@@oB%xb@@@&kpB@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@BZp#B@@8|#@h@@@@@", 0
+    skullRow32  BYTE "@@@@@M8%r*@@@@@@@@@@@@@@@@@@@@@@B@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%\M@*@@@", 0
+    skullRow33  BYTE "@@@@@@%8@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*#B@@@", 0
+    skullRow34  BYTE "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
+    skullRow35  BYTE "@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@B@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", 0
 
 .code
 
@@ -93,18 +133,31 @@ GOTO_XY MACRO col, row
     call Gotoxy
 ENDM
 
+WRITEMSG MACRO varName
+    mov edx, OFFSET varName
+    call WriteString
+ENDM
 
-main PROC
-    call Randomize              ; Seed the random generator
-
-    call GetRandomFileLine      ; Returns index in EAX
-    
-    call LoadFileLine           ; EAX is already the input
-
-    call PlayGuessingGame
-
-    exit
-main ENDP
+CMP_NOCASE MACRO char1, char2
+    LOCAL skip1, skip2
+    push eax
+    push ebx
+    cmp char1, 'a'
+    jb  skip1
+    cmp char1, 'z'
+    ja  skip1
+    and char1, 11011111b
+    skip1:
+    cmp char2, 'a'
+    jb  skip2
+    cmp char2, 'z'
+    ja  skip2
+    and char2, 11011111b
+    skip2:
+    cmp char1, char2
+    pop ebx
+    pop eax
+ENDM
 
 OPENFILECREATE MACRO
     INVOKE CreateFile, ADDR databaseName, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0
@@ -114,63 +167,115 @@ OPENFILEREAD MACRO
     INVOKE ReadFile, file_handle, ADDR file_buffer, 4096, ADDR bytes_read, 0
 ENDM
 
+; ============================================================
+main PROC
+    call Randomize
+
+    GameLoop:
+        mov guesses_left, 5
+        mov used_count, 0
+        mov BYTE PTR [used_letters], 0
+        mov BYTE PTR [mask_buffer], 0
+        mov BYTE PTR [user_input], 0
+
+        call GetRandomFileLine
+        call LoadFileLine
+        call PlayGuessingGame
+
+        call AskRestart
+        jz   GameLoop
+
+    exit
+main ENDP
+
+; ============================================================
+AskRestart PROC
+    pushad
+
+    AR_Prompt:
+        SET_COLOR CLR_WORD
+        GOTO_XY 21, RESTART_ROW
+
+        call ReadChar
+        call WriteChar
+
+        or  al, 20h
+        cmp al, 'y'
+        je  AR_Yes
+        cmp al, 'n'
+        je  AR_No
+
+        SET_COLOR CLR_PROMPT
+        GOTO_XY 0, RESTART_ROW
+        mov edx, OFFSET restartMsg
+        call WriteString
+        jmp AR_Prompt
+
+    AR_Yes:
+        popad
+        test eax, 0
+        ret
+
+    AR_No:
+        popad
+        or eax, 1
+        ret
+AskRestart ENDP
+
+; ============================================================
 IsLetterUsed PROC
-    pushad                      ; saves EAX (= the caller's AL in the low byte)
- 
-    ; Normalize the query char to uppercase if it is a letter
+    pushad
     mov cl, al
     cmp cl, 'a'
     jb  ILU_Scan
     cmp cl, 'z'
     ja  ILU_Scan
-    and cl, 11011111b           ; uppercase
- 
+    and cl, 11011111b
+
     ILU_Scan:
         mov esi, OFFSET used_letters
     ILU_Loop:
         mov al, [esi]
         cmp al, 0
         je  ILU_NotFound
-        ; The stored chars are already normalized (AddUsedLetter normalizes letters)
         cmp al, cl
         je  ILU_Found
         inc esi
         jmp ILU_Loop
-    
+
     ILU_Found:
         popad
-        test eax, 0     ; ZF = 1
+        test eax, 0
         ret
-    
+
     ILU_NotFound:
         popad
-        or  eax, 1      ; ZF = 0
+        or  eax, 1
         ret
 IsLetterUsed ENDP
 
+; ============================================================
 AddUsedLetter PROC
     pushad
     mov cl, al
- 
-    ; Normalize letters only
     cmp cl, 'a'
     jb  ALU_Store
     cmp cl, 'z'
     ja  ALU_Store
     and cl, 11011111b
- 
+
     ALU_Store:
         mov edi, OFFSET used_letters
-        add edi, used_count         ; point past existing chars
-        mov [edi], cl               ; store new char
+        add edi, used_count
+        mov [edi], cl
         inc edi
-        mov BYTE PTR [edi], 0       ; keep null-terminated
+        mov BYTE PTR [edi], 0
         inc used_count
-    
         popad
         ret
 AddUsedLetter ENDP
 
+; ============================================================
 DrawStatusUsed PROC
     pushad
     call ClearStatusLine
@@ -182,22 +287,19 @@ DrawStatusUsed PROC
     ret
 DrawStatusUsed ENDP
 
+; ============================================================
 DrawUsedLine PROC
     pushad
- 
-    ; Blank the row first so stale chars are cleared
     SET_COLOR CLR_NORMAL
     GOTO_XY INNER_LEFT, USED_ROW
     mov edx, OFFSET blankLine46
     call WriteString
- 
-    ; Label
+
     SET_COLOR CLR_PROMPT
     GOTO_XY INNER_LEFT, USED_ROW
     mov edx, OFFSET usedLbl
     call WriteString
- 
-    ; Letters (space-separated)
+
     SET_COLOR CLR_WORD
     mov esi, OFFSET used_letters
     DUL_Loop:
@@ -209,23 +311,22 @@ DrawUsedLine PROC
         call WriteChar
         inc esi
         jmp DUL_Loop
-    
+
     DUL_Done:
         popad
         ret
 DrawUsedLine ENDP
 
+; ============================================================
 DrawBorder PROC
     pushad
     call ClrScr
     SET_COLOR CLR_BORDER
 
-    ; ╔ top-left
     GOTO_XY BOX_LEFT, BOX_TOP
     mov al, 0C9h
     call WriteChar
 
-    ; top edge ══...══
     mov dl, BOX_LEFT + 1
     mov dh, BOX_TOP
     mov ecx, BOX_WIDTH - 2
@@ -236,16 +337,14 @@ DrawBorder PROC
         inc dl
         loop DB_TopLoop
 
-        ; ╗ top-right
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        mov dh, BOX_TOP
-        call Gotoxy
-        mov al, 0BBh
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    mov dh, BOX_TOP
+    call Gotoxy
+    mov al, 0BBh
+    call WriteChar
 
-        ; side walls ║ ... ║
-        mov dh, BOX_TOP + 1
-        mov ecx, BOX_HEIGHT - 2
+    mov dh, BOX_TOP + 1
+    mov ecx, BOX_HEIGHT - 2
     DB_SideLoop:
         mov dl, BOX_LEFT
         call Gotoxy
@@ -258,17 +357,15 @@ DrawBorder PROC
         inc dh
         loop DB_SideLoop
 
-        ; ╚ bottom-left
-        mov dl, BOX_LEFT
-        mov dh, BOT_ROW
-        call Gotoxy
-        mov al, 0C8h
-        call WriteChar
+    mov dl, BOX_LEFT
+    mov dh, BOT_ROW
+    call Gotoxy
+    mov al, 0C8h
+    call WriteChar
 
-        ; bottom edge ══...══
-        mov dl, BOX_LEFT + 1
-        mov dh, BOT_ROW
-        mov ecx, BOX_WIDTH - 2
+    mov dl, BOX_LEFT + 1
+    mov dh, BOT_ROW
+    mov ecx, BOX_WIDTH - 2
     DB_BotLoop:
         call Gotoxy
         mov al, 0CDh
@@ -276,28 +373,26 @@ DrawBorder PROC
         inc dl
         loop DB_BotLoop
 
-        ; ╝ bottom-right
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        mov dh, BOT_ROW
-        call Gotoxy
-        mov al, 0BCh
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    mov dh, BOT_ROW
+    call Gotoxy
+    mov al, 0BCh
+    call WriteChar
 
-        popad
-        ret
+    popad
+    ret
 DrawBorder ENDP
 
+; ============================================================
 DrawHDivider PROC
     pushad
     SET_COLOR CLR_BORDER
 
-    ; ╠ left junction
     mov dl, BOX_LEFT
     call Gotoxy
     mov al, 0CCh
     call WriteChar
 
-    ; ═ fill
     mov dl, BOX_LEFT + 1
     mov ecx, BOX_WIDTH - 2
     DHD_Loop:
@@ -307,16 +402,16 @@ DrawHDivider PROC
         inc dl
         loop DHD_Loop
 
-        ; ╣ right junction
-        mov dl, BOX_LEFT + BOX_WIDTH - 1
-        call Gotoxy
-        mov al, 0B9h
-        call WriteChar
+    mov dl, BOX_LEFT + BOX_WIDTH - 1
+    call Gotoxy
+    mov al, 0B9h
+    call WriteChar
 
-        popad
-        ret
+    popad
+    ret
 DrawHDivider ENDP
 
+; ============================================================
 DrawTitle PROC
     pushad
     SET_COLOR CLR_TITLE
@@ -327,6 +422,7 @@ DrawTitle PROC
     ret
 DrawTitle ENDP
 
+; ============================================================
 DrawWordLine PROC
     pushad
     SET_COLOR CLR_PROMPT
@@ -336,7 +432,6 @@ DrawWordLine PROC
     SET_COLOR CLR_WORD
     mov edx, OFFSET mask_buffer
     call WriteString
-    ; pad so stale chars from a longer previous mask are erased
     mov ecx, 20
     mov al, ' '
     DWL_Pad:
@@ -346,6 +441,7 @@ DrawWordLine PROC
         ret
 DrawWordLine ENDP
 
+; ============================================================
 DrawLivesLine PROC
     pushad
     SET_COLOR CLR_PROMPT
@@ -365,7 +461,6 @@ DrawLivesLine PROC
         loop DLL_HeartLoop
 
     DLL_DoEmpty:
-        ; dimmed x for each life spent
         SET_COLOR CLR_DIMMED
         mov ecx, 5
         sub ecx, guesses_left
@@ -379,7 +474,6 @@ DrawLivesLine PROC
         loop DLL_XLoop
 
     DLL_Done:
-        ; trailing spaces to erase previous state
         mov ecx, 8
         mov al, ' '
     DLL_Pad:
@@ -389,6 +483,7 @@ DrawLivesLine PROC
         ret
 DrawLivesLine ENDP
 
+; ============================================================
 ClearStatusLine PROC
     pushad
     SET_COLOR CLR_NORMAL
@@ -399,6 +494,7 @@ ClearStatusLine PROC
     ret
 ClearStatusLine ENDP
 
+; ============================================================
 DrawStatusHit PROC
     pushad
     call ClearStatusLine
@@ -410,7 +506,7 @@ DrawStatusHit PROC
     ret
 DrawStatusHit ENDP
 
-
+; ============================================================
 DrawStatusMiss PROC
     pushad
     call ClearStatusLine
@@ -422,6 +518,7 @@ DrawStatusMiss PROC
     ret
 DrawStatusMiss ENDP
 
+; ============================================================
 DrawWinScreen PROC
     pushad
     SET_COLOR CLR_WIN
@@ -436,104 +533,221 @@ DrawWinScreen PROC
     ret
 DrawWinScreen ENDP
 
+; ============================================================
+; DrawLoseScreen — clears screen, prints 36-row x 80-col skull art,
+;   then GAME OVER + answer + restart prompt
+; ============================================================
 DrawLoseScreen PROC
     pushad
-    SET_COLOR CLR_LOSE
-    GOTO_XY INNER_LEFT, INPUT_ROW
-    mov edx, OFFSET blankLine30
+
+    call ClrScr
+    SET_COLOR CLR_WORD
+
+    GOTO_XY 0, 0
+    mov edx, OFFSET skullRow00
     call WriteString
-    GOTO_XY INNER_LEFT, INPUT_ROW
+
+    GOTO_XY 0, 1
+    mov edx, OFFSET skullRow01
+    call WriteString
+
+    GOTO_XY 0, 2
+    mov edx, OFFSET skullRow02
+    call WriteString
+
+    GOTO_XY 0, 3
+    mov edx, OFFSET skullRow03
+    call WriteString
+
+    GOTO_XY 0, 4
+    mov edx, OFFSET skullRow04
+    call WriteString
+
+    GOTO_XY 0, 5
+    mov edx, OFFSET skullRow05
+    call WriteString
+
+    GOTO_XY 0, 6
+    mov edx, OFFSET skullRow06
+    call WriteString
+
+    GOTO_XY 0, 7
+    mov edx, OFFSET skullRow07
+    call WriteString
+
+    GOTO_XY 0, 8
+    mov edx, OFFSET skullRow08
+    call WriteString
+
+    GOTO_XY 0, 9
+    mov edx, OFFSET skullRow09
+    call WriteString
+
+    GOTO_XY 0, 10
+    mov edx, OFFSET skullRow10
+    call WriteString
+
+    GOTO_XY 0, 11
+    mov edx, OFFSET skullRow11
+    call WriteString
+
+    GOTO_XY 0, 12
+    mov edx, OFFSET skullRow12
+    call WriteString
+
+    GOTO_XY 0, 13
+    mov edx, OFFSET skullRow13
+    call WriteString
+
+    GOTO_XY 0, 14
+    mov edx, OFFSET skullRow14
+    call WriteString
+
+    GOTO_XY 0, 15
+    mov edx, OFFSET skullRow15
+    call WriteString
+
+    GOTO_XY 0, 16
+    mov edx, OFFSET skullRow16
+    call WriteString
+
+    GOTO_XY 0, 17
+    mov edx, OFFSET skullRow17
+    call WriteString
+
+    GOTO_XY 0, 18
+    mov edx, OFFSET skullRow18
+    call WriteString
+
+    GOTO_XY 0, 19
+    mov edx, OFFSET skullRow19
+    call WriteString
+
+    GOTO_XY 0, 20
+    mov edx, OFFSET skullRow20
+    call WriteString
+
+    GOTO_XY 0, 21
+    mov edx, OFFSET skullRow21
+    call WriteString
+
+    GOTO_XY 0, 22
+    mov edx, OFFSET skullRow22
+    call WriteString
+
+    GOTO_XY 0, 23
+    mov edx, OFFSET skullRow23
+    call WriteString
+
+    GOTO_XY 0, 24
+    mov edx, OFFSET skullRow24
+    call WriteString
+
+    GOTO_XY 0, 25
+    mov edx, OFFSET skullRow25
+    call WriteString
+
+    GOTO_XY 0, 26
+    mov edx, OFFSET skullRow26
+    call WriteString
+
+    GOTO_XY 0, 27
+    mov edx, OFFSET skullRow27
+    call WriteString
+
+    GOTO_XY 0, 28
+    mov edx, OFFSET skullRow28
+    call WriteString
+
+    GOTO_XY 0, 29
+    mov edx, OFFSET skullRow29
+    call WriteString
+
+    GOTO_XY 0, 30
+    mov edx, OFFSET skullRow30
+    call WriteString
+
+    GOTO_XY 0, 31
+    mov edx, OFFSET skullRow31
+    call WriteString
+
+    GOTO_XY 0, 32
+    mov edx, OFFSET skullRow32
+    call WriteString
+
+    GOTO_XY 0, 33
+    mov edx, OFFSET skullRow33
+    call WriteString
+
+    GOTO_XY 0, 34
+    mov edx, OFFSET skullRow34
+    call WriteString
+
+    GOTO_XY 0, 35
+    mov edx, OFFSET skullRow35
+    call WriteString
+
+    ; --- GAME OVER line ---
+    SET_COLOR CLR_LOSE
+    GOTO_XY 0, GAMEOVER_ROW
     mov edx, OFFSET loseMsg2
     call WriteString
+
+    ; --- Answer line ---
     SET_COLOR CLR_WORD
-    GOTO_XY INNER_LEFT, STATUS_ROW
+    GOTO_XY 0, ANSWER_ROW
     mov edx, OFFSET answerLbl
     call WriteString
     mov edx, OFFSET line_buffer
     call WriteString
+
+    ; --- Restart prompt ---
+    SET_COLOR CLR_PROMPT
+    GOTO_XY 0, RESTART_ROW
+    mov edx, OFFSET restartMsg
+    call WriteString
+
     popad
     ret
 DrawLoseScreen ENDP
 
-
-CMP_NOCASE MACRO char1, char2
-    LOCAL skip1, skip2
-    push eax
-    push ebx
-    ;; Convert char1 to uppercase if it's a lowercase letter
-    cmp char1, 'a'
-    jb  skip1
-    cmp char1, 'z'
-    ja  skip1
-    and char1, 11011111b    ;; to uppercase (0xDF)
-    skip1:
-
-        ;; Convert char2 to uppercase if it's a lowercase letter
-        cmp char2, 'a'
-        jb  skip2
-        cmp char2, 'z'
-        ja  skip2
-        and char2, 11011111b
-    skip2:
-        cmp char1, char2
-        pop ebx
-        pop eax
-ENDM
-;NEW MACRO
-WRITEMSG MACRO varName
-    mov edx, OFFSET varName     ; moved the offset of varName into edx
-    call WriteString            ; print the string
-ENDM
-
-; input: esi = pointer to string 1, edi = pointer to string 2
-; output: zf = 1 if match
+; ============================================================
 Str_Compare_NOCASE PROC
-    pushad              ; Save all registers
-
+    pushad
     L1:
-        mov al, [esi]      
-        mov bl, [edi]       
-        
-        ; Convert AL to uppercase
+        mov al, [esi]
+        mov bl, [edi]
         cmp al, 'a'
         jb  CheckBL
         cmp al, 'z'
         ja  CheckBL
         and al, 11011111b
     CheckBL:
-        ; Convert BL to uppercase
         cmp bl, 'a'
         jb  CompareChars
         cmp bl, 'z'
         ja  CompareChars
         and bl, 11011111b
-
     CompareChars:
-        cmp al, bl      ; Compare normalized chars
-        jne NotEqual        ; If mismatch, exit
-        
+        cmp al, bl
+        jne NotEqual
         cmp al, 0
         je  StringsMatch
-        
         inc esi
         inc edi
         jmp L1
-
     StringsMatch:
-        popad               ; Restore registers
-        test eax, 0         ; Force Zero Flag = 1
+        popad
+        test eax, 0
         ret
-
     NotEqual:
-        popad               ; Restore registers
-        or eax, 1           ; Force Zero Flag = 0
+        popad
+        or eax, 1
         ret
 Str_Compare_NOCASE ENDP
 
-
-; returns: EAX = random line index (0-based)
+; ============================================================
 GetRandomFileLine PROC
-    ; 1. Open the file to count total lines
     OPENFILECREATE
     mov file_handle, eax
     cmp eax, INVALID_HANDLE_VALUE
@@ -547,10 +761,9 @@ GetRandomFileLine PROC
         je  EndCount
         mov ecx, bytes_read
         mov esi, OFFSET file_buffer
-
     Scan:
         lodsb
-        cmp al, 0Ah          ; Line Feed found?
+        cmp al, 0Ah
         jne Next
         inc current_line
     Next:
@@ -561,21 +774,19 @@ GetRandomFileLine PROC
         mov eax, current_line
         cmp eax, 0
         je  Fail
-        call RandomRange     ; Returns [0 to current_line-1] in EAX
+        call RandomRange
         ret
     Fail:
         xor eax, eax
         ret
-    
 GetRandomFileLine ENDP
 
-
-; input: EAX = line index to retrieve
+; ============================================================
 LoadFileLine PROC
     mov target_line, eax
     mov current_line, 0
     mov is_copying, 0
-    
+
     OPENFILECREATE
     mov file_handle, eax
     cmp eax, INVALID_HANDLE_VALUE
@@ -587,26 +798,22 @@ LoadFileLine PROC
         OPENFILEREAD
         cmp bytes_read, 0
         je  CloseAndExit
-        
         mov ecx, bytes_read
         mov esi, OFFSET file_buffer
 
     Process:
         lodsb
         mov bl, al
-        
         mov edx, current_line
         cmp edx, target_line
         jne Skip
 
-        ; We are at the target line
         mov is_copying, 1
-        cmp bl, 0Dh          ; Carriage Return?
+        cmp bl, 0Dh
         je  Finish
-        cmp bl, 0Ah          ; Line Feed?
+        cmp bl, 0Ah
         je  Finish
-        
-        mov [edi], bl        ; Copy char to line_buffer
+        mov [edi], bl
         inc edi
         jmp NextChar
 
@@ -620,17 +827,15 @@ LoadFileLine PROC
         jmp  ReadLoop
 
     Finish:
-        mov BYTE PTR [edi], 0 ; Null terminate
+        mov BYTE PTR [edi], 0
     CloseAndExit:
         INVOKE CloseHandle, file_handle
     LoadExit:
         ret
 LoadFileLine ENDP
 
-
-
+; ============================================================
 PlayGuessingGame PROC
-    ;-- build mask (_ for every char) --------------------------
     mov esi, OFFSET line_buffer
     mov edi, OFFSET mask_buffer
     PGG_MaskLoop:
@@ -643,12 +848,8 @@ PlayGuessingGame PROC
     PGG_DoneMask:
         mov BYTE PTR [edi], 0
 
-        ;-- draw static frame once ---------------------------------
         call DrawBorder
         call DrawTitle
-        mov dh, DIV1_ROW  
-        call DrawHDivider   
-        ; write each divider call on its own line:
         mov dh, DIV1_ROW
         call DrawHDivider
         mov dh, DIV2_ROW
@@ -662,7 +863,6 @@ PlayGuessingGame PROC
         call DrawLivesLine
         call DrawUsedLine
 
-        ;-- main letter-guess loop ---------------------------------
     PGG_GameLoop:
         cmp guesses_left, 0
         je  PGG_FinalInput
@@ -670,7 +870,6 @@ PlayGuessingGame PROC
         call DrawWordLine
         call DrawLivesLine
 
-        ; clear + redraw input prompt
         SET_COLOR CLR_NORMAL
         GOTO_XY INNER_LEFT, INPUT_ROW
         mov edx, OFFSET blankLine30
@@ -680,25 +879,24 @@ PlayGuessingGame PROC
         mov edx, OFFSET inputLbl
         call WriteString
 
-        ; place cursor right after the prompt text (16 chars wide)
         SET_COLOR CLR_WORD
         GOTO_XY INNER_LEFT + 16, INPUT_ROW
 
         call ReadChar
         mov guessed_char, al
-        call WriteChar              ; echo the letter
+        call WriteChar
 
         mov al, guessed_char
-        call IsLetterUsed           ; ZF=1 if already in used_letters
+        call IsLetterUsed
         jz  PGG_Duplicate
 
         mov al, guessed_char
         call AddUsedLetter
-        call DrawUsedLine           ; update USED row immediately
-    
-        mov al, guessed_char        ; restore guessed char for comparison
-        mov bl, 0                   ; hit flag
-    
+        call DrawUsedLine
+
+        mov al, guessed_char
+        mov bl, 0
+
         mov esi, OFFSET line_buffer
         mov edi, OFFSET mask_buffer
     PGG_ScanHits:
@@ -713,20 +911,35 @@ PlayGuessingGame PROC
         inc esi
         inc edi
         jmp PGG_ScanHits
+
     PGG_ScanDone:
-        dec guesses_left
         cmp bl, 1
         je  PGG_Hit
+        dec guesses_left        ; only decrement on a miss
         call DrawStatusMiss
-        jmp PGG_GameLoop
+        jmp PGG_CheckWin
     PGG_Hit:
         call DrawStatusHit
-        jmp PGG_GameLoop
-    
+
+    PGG_CheckWin:
+        ; scan mask — if no underscores remain, player has won
+        mov esi, OFFSET mask_buffer
+    PGG_WinScan:
+        mov al, [esi]
+        cmp al, 0
+        je  PGG_MaybeWin
+        cmp al, '_'
+        je  PGG_GameLoop        ; underscore found — keep playing
+        inc esi
+        jmp PGG_WinScan
+    PGG_MaybeWin:
+        call DrawWinScreen
+        jmp PGG_GameExit
+
     PGG_Duplicate:
         call DrawStatusUsed
         jmp PGG_GameLoop
-        ;-- final full-word guess -----------------------------------
+
     PGG_FinalInput:
         call DrawWordLine
         call DrawLivesLine
@@ -741,7 +954,6 @@ PlayGuessingGame PROC
         mov edx, OFFSET finalLbl
         call WriteString
 
-        ; read the guess on STATUS_ROW so it sits inside the box
         SET_COLOR CLR_WORD
         GOTO_XY INNER_LEFT, STATUS_ROW
         mov edx, OFFSET blankLine30
@@ -758,13 +970,14 @@ PlayGuessingGame PROC
 
         call DrawLoseScreen
         jmp PGG_GameExit
+
     PGG_Win:
         call DrawWinScreen
+
     PGG_GameExit:
         SET_COLOR CLR_NORMAL
-        GOTO_XY 0, BOT_ROW + 2     ; move cursor below box before exit
+        GOTO_XY 0, BOT_ROW + 2
         ret
 PlayGuessingGame ENDP
-
 
 END main
